@@ -16,6 +16,7 @@ class AnalysisState(TypedDict, total=False):
     companies: list[str]
     metrics: dict[str, dict[str, float | str]]
     summary: str
+    llm_provider: str
     audit_log: list[AuditEvent]
     checkpoint_count: int
 

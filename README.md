@@ -49,6 +49,14 @@ Save the full result:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --output outputs\analysis.json
 ```
 
+Choose a summarization provider:
+
+```powershell
+.\.venv\Scripts\python.exe -m golden_repo_retriever.cli --llm-provider local
+```
+
+The default provider is `local`, so no cloud model is called unless you configure a key and choose another provider.
+
 Run the API:
 
 ```powershell
@@ -96,6 +104,28 @@ frontend/CLI/API -> query -> optional text/PDF report -> state -> retrieval agen
 ```
 
 The repo includes a small shared state object and audit log.
+
+## Optional LLM Providers
+
+By default, summaries are generated locally from calculated metrics.
+
+To enable OpenAI-compatible summarization, copy `.env.example` to `.env` and configure one provider:
+
+```text
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+or:
+
+```text
+LLM_PROVIDER=mistral
+MISTRAL_API_KEY=your_key
+MISTRAL_MODEL=mistral-small-latest
+```
+
+If no key is present, the app falls back to local summarization.
 
 ## Next Steps
 

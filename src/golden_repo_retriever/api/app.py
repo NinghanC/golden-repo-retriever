@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
 from ..documents import parse_report_upload
+from ..llm import LLMSettings
 from ..reporting import export_result
 from ..workflow import run_analysis
 from .schemas import AnalyzeRequest, AnalyzeResponse, ConfigResponse, HealthResponse
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/v1/config", response_model=ConfigResponse)
     def config() -> ConfigResponse:
+        llm_settings = LLMSettings.from_env()
         return ConfigResponse(
             app_name="Golden Repo Retriever",
             version="0.1.0",
@@ -40,12 +42,14 @@ def create_app() -> FastAPI:
                 "upload_reports": True,
                 "json_export": True,
                 "pdf_parsing": True,
+                "llm_provider": llm_settings.provider,
+                "llm_enabled": bool(llm_settings.api_key),
             },
         )
 
     @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
     def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
-        result = run_analysis(payload.query, report_text=payload.report_text)
+        result = run_analysis(payload.query, report_text=payload.report_text, llm_provider=payload.llm_provider)
         if payload.export_path:
             result["export_path"] = export_result(result, payload.export_path)
         return AnalyzeResponse(**result)
@@ -54,6 +58,7 @@ def create_app() -> FastAPI:
     async def analyze_upload(
         query: str = Form(...),
         export_path: str | None = Form(default=None),
+        llm_provider: str | None = Form(default=None),
         file: UploadFile = File(...),
     ) -> AnalyzeResponse:
         try:
@@ -61,7 +66,7 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        result = run_analysis(query, report_text=report_text)
+        result = run_analysis(query, report_text=report_text, llm_provider=llm_provider)
         result["report_source"] = source
         if export_path:
             result["export_path"] = export_result(result, export_path)

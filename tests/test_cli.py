@@ -23,6 +23,7 @@ class CliTestCase(unittest.TestCase):
 
         self.assertEqual(payload["companies"], ["Apple"])
         self.assertIn("summary", payload)
+        self.assertEqual(payload["llm_provider"], "local")
         self.assertEqual(payload["checkpoint_count"], 3)
 
     def test_cli_uses_report_file(self) -> None:

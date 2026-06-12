@@ -17,11 +17,17 @@ def main() -> None:
     )
     parser.add_argument("--file", default=None, help="Optional UTF-8 text report to include in the analysis.")
     parser.add_argument("--output", default=None, help="Optional path to save the full analysis result as JSON.")
+    parser.add_argument(
+        "--llm-provider",
+        choices=["local", "openai", "mistral", "custom"],
+        default=None,
+        help="Optional summarization provider. Defaults to LLM_PROVIDER or local.",
+    )
     parser.add_argument("--json", action="store_true", help="Print the full result as JSON.")
     args = parser.parse_args()
 
     report_path = str(Path(args.file)) if args.file else None
-    result = run_analysis(args.query, report_path=report_path)
+    result = run_analysis(args.query, report_path=report_path, llm_provider=args.llm_provider)
     if args.output:
         export_path = export_result(result, args.output)
         result["export_path"] = export_path

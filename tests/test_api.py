@@ -21,6 +21,14 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_config_reports_llm_provider(self) -> None:
+        response = self.client.get("/api/v1/config")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["features"]["llm_provider"], "local")
+        self.assertFalse(payload["features"]["llm_enabled"])
+
     def test_root_redirects_to_frontend(self) -> None:
         response = self.client.get("/", follow_redirects=False)
 
@@ -33,6 +41,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["companies"], ["Apple", "Microsoft"])
+        self.assertEqual(payload["llm_provider"], "local")
         self.assertIn("summary", payload)
 
     def test_analyze_uses_report_text(self) -> None:

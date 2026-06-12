@@ -9,6 +9,7 @@ class AnalyzeRequest(BaseModel):
     query: str = Field(..., description="Finance analysis query.")
     report_text: str | None = Field(default=None, description="Optional plain-text report content.")
     export_path: str | None = Field(default=None, description="Optional JSON output path.")
+    llm_provider: str | None = Field(default=None, description="Optional provider: local, openai, mistral, or custom.")
 
 
 class AnalyzeResponse(BaseModel):
@@ -16,6 +17,7 @@ class AnalyzeResponse(BaseModel):
     companies: list[str]
     metrics: dict[str, dict[str, float | str]]
     summary: str
+    llm_provider: str
     audit_log: list[dict[str, str]]
     checkpoint_count: int
     report_source: str | None = None
