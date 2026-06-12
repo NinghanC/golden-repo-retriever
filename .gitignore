@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+.uv-cache/
+.uv-python/
+outputs/
+*.db
+*.egg-info/

@@ -1,0 +1,22 @@
+[project]
+name = "golden-repo-retriever"
+version = "0.1.0"
+description = "Local finance-report workflow for company metrics and summaries."
+requires-python = ">=3.11"
+dependencies = [
+  "httpx",
+  "python-dotenv",
+]
+
+[project.scripts]
+golden-repo-retriever = "golden_repo_retriever.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
