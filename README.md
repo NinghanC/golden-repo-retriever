@@ -59,7 +59,7 @@ Save the full result:
 query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
 ```
 
-The repo includes a small shared state object and audit log. See `DEVELOPMENT.md` for current development notes.
+The repo includes a small shared state object and audit log.
 
 ## Next Steps
 
