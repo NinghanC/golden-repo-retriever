@@ -29,6 +29,12 @@ Run with a custom query:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --query "Read finance report for Simba."
 ```
 
+Include a local text report:
+
+```powershell
+.\.venv\Scripts\python.exe -m golden_repo_retriever.cli --file samples\microsoft_report.txt
+```
+
 Print JSON:
 
 ```powershell
@@ -44,7 +50,7 @@ Print JSON:
 ## Current Workflow
 
 ```text
-query -> state -> company detection -> sample data -> metrics -> summary -> audit log
+query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log
 ```
 
 The repo includes a small shared state object and audit log. See `DEVELOPMENT.md` for current development notes.

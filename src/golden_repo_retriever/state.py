@@ -11,6 +11,8 @@ class AuditEvent(TypedDict):
 
 class AnalysisState(TypedDict, total=False):
     query: str
+    report_source: str
+    report_text: str
     companies: list[str]
     metrics: dict[str, dict[str, float | str]]
     summary: str

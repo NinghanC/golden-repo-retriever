@@ -3,9 +3,9 @@ from __future__ import annotations
 from .sample_data import SAMPLE_FINANCIAL_DATA
 
 
-def extract_companies(query: str) -> list[str]:
-    """Find known companies mentioned in the query."""
-    lowered = query.lower()
+def extract_companies(query: str, report_text: str = "") -> list[str]:
+    """Find known companies mentioned in the query or report text."""
+    lowered = f"{query}\n{report_text}".lower()
     companies = [name for name in SAMPLE_FINANCIAL_DATA if name.lower() in lowered]
     return companies or ["Apple", "Microsoft"]
 

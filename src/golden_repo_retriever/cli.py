@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 from .workflow import run_analysis
 
@@ -13,10 +14,12 @@ def main() -> None:
         default="Compare Apple and Microsoft on supply chain risk and R&D investment.",
         help="Analysis query.",
     )
+    parser.add_argument("--file", default=None, help="Optional UTF-8 text report to include in the analysis.")
     parser.add_argument("--json", action="store_true", help="Print the full result as JSON.")
     args = parser.parse_args()
 
-    result = run_analysis(args.query)
+    report_path = str(Path(args.file)) if args.file else None
+    result = run_analysis(args.query, report_path=report_path)
     if args.json:
         print(json.dumps(result, indent=2))
         return

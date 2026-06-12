@@ -5,7 +5,7 @@ Golden Repo Retriever is under construction.
 The current codebase focuses on a small local workflow with clear state tracking:
 
 ```text
-query -> state -> company detection -> sample data -> metrics -> summary -> audit log
+query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log
 ```
 
 ## Current Components
@@ -15,6 +15,7 @@ query -> state -> company detection -> sample data -> metrics -> summary -> audi
 - `state.py`: shared state and audit event helpers
 - `tools.py`: company detection, metric calculation, and summary formatting
 - `sample_data.py`: local sample data
+- `samples/`: small text reports for local checks
 - `tests/test_workflow.py`: workflow smoke test
 
 ## Development Direction
