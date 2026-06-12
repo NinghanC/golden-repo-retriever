@@ -18,7 +18,7 @@ class WorkflowTestCase(unittest.TestCase):
         self.assertEqual(result["checkpoint_count"], 3)
         self.assertEqual(
             [event["step"] for event in result["audit_log"]],
-            ["detect_companies", "compute_metrics", "write_summary"],
+            ["retrieval_agent", "analyst_agent", "synthesizer_agent"],
         )
 
     def test_run_analysis_uses_report_text_for_company_detection(self) -> None:

@@ -86,7 +86,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
 ## Current Workflow
 
 ```text
-CLI/API -> query -> optional text/PDF report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
+CLI/API -> query -> optional text/PDF report -> state -> retrieval agent -> analyst agent -> synthesizer agent -> audit log -> optional export
 ```
 
 The repo includes a small shared state object and audit log.
