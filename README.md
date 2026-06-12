@@ -41,6 +41,12 @@ Print JSON:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --json
 ```
 
+Save the full result:
+
+```powershell
+.\.venv\Scripts\python.exe -m golden_repo_retriever.cli --output outputs\analysis.json
+```
+
 ## Test
 
 ```powershell
@@ -50,7 +56,7 @@ Print JSON:
 ## Current Workflow
 
 ```text
-query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log
+query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
 ```
 
 The repo includes a small shared state object and audit log. See `DEVELOPMENT.md` for current development notes.
@@ -59,6 +65,5 @@ The repo includes a small shared state object and audit log. See `DEVELOPMENT.md
 
 - Add more companies.
 - Add more metrics.
-- Add file output.
 - Add PDF parsing.
 - Add an API.

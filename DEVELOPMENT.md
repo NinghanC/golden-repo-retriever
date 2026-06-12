@@ -5,7 +5,7 @@ Golden Repo Retriever is under construction.
 The current codebase focuses on a small local workflow with clear state tracking:
 
 ```text
-query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log
+query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
 ```
 
 ## Current Components
@@ -14,6 +14,7 @@ query -> optional text report -> state -> company detection -> sample data -> me
 - `workflow.py`: workflow phases
 - `state.py`: shared state and audit event helpers
 - `tools.py`: company detection, metric calculation, and summary formatting
+- `reporting.py`: JSON export helpers
 - `sample_data.py`: local sample data
 - `samples/`: small text reports for local checks
 - `tests/test_workflow.py`: workflow smoke test
@@ -24,7 +25,6 @@ The project is expected to grow gradually:
 
 - Add more companies and sample data fields.
 - Add more financial metrics.
-- Add file export for analysis results.
 - Add PDF parsing for uploaded reports.
 - Add an API layer.
 - Add optional OpenAI or Mistral summarization behind local fallback behavior.
