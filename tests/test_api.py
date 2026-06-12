@@ -21,6 +21,12 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_root_redirects_to_frontend(self) -> None:
+        response = self.client.get("/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers["location"], "/static/index.html")
+
     def test_analyze_returns_summary(self) -> None:
         response = self.client.post("/api/v1/analyze", json={"query": "Compare Apple and Microsoft."})
 

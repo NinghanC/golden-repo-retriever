@@ -55,6 +55,12 @@ Run the API:
 .\.venv\Scripts\python.exe start_api.py
 ```
 
+Open the frontend:
+
+```text
+http://127.0.0.1:8000
+```
+
 Health check:
 
 ```powershell
@@ -86,7 +92,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
 ## Current Workflow
 
 ```text
-CLI/API -> query -> optional text/PDF report -> state -> retrieval agent -> analyst agent -> synthesizer agent -> audit log -> optional export
+frontend/CLI/API -> query -> optional text/PDF report -> state -> retrieval agent -> analyst agent -> synthesizer agent -> audit log -> optional export
 ```
 
 The repo includes a small shared state object and audit log.

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Golden Repo Retriever</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d9dee8;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #047857;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .topbar {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    main {
+      padding: 24px 0 48px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    textarea, input[type="text"], input[type="file"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+    }
+    button.secondary {
+      background: #eef2ff;
+      color: #1e3a8a;
+    }
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+    .summary {
+      font-size: 17px;
+      margin: 0;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+    .chip {
+      display: inline-flex;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .audit {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .event {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcff;
+    }
+    .event strong {
+      display: block;
+      font-size: 13px;
+    }
+    .event span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .message {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .message.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .empty {
+      color: var(--muted);
+    }
+    pre {
+      overflow: auto;
+      max-height: 320px;
+      background: #111827;
+      color: #f9fafb;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+    }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap topbar">
+      <h1>Golden Repo Retriever</h1>
+      <div class="status" id="status">Checking API...</div>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="grid">
+      <section>
+        <h2>Analyze</h2>
+        <label for="query">Query</label>
+        <textarea id="query">Compare Apple and Microsoft on supply chain risk and R&amp;D investment.</textarea>
+
+        <label for="reportText">Report Text</label>
+        <textarea id="reportText" placeholder="Optional report text"></textarea>
+
+        <label for="file">Report File</label>
+        <input id="file" type="file" accept=".txt,.md,.pdf">
+
+        <div class="actions">
+          <button id="runBtn" type="button">Run Analysis</button>
+          <button class="secondary" id="clearBtn" type="button">Clear</button>
+        </div>
+        <div class="message" id="message"></div>
+      </section>
+
+      <section>
+        <h2>Result</h2>
+        <p class="summary empty" id="summary">No analysis yet.</p>
+        <div class="chips" id="companies"></div>
+        <table id="metricsTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>EBITDA Margin</th>
+              <th>R&amp;D Intensity</th>
+              <th>Supply Chain Risk</th>
+            </tr>
+          </thead>
+          <tbody id="metricsBody"></tbody>
+        </table>
+
+        <h2 style="margin-top:22px">Audit Log</h2>
+        <div class="audit" id="auditLog"></div>
+
+        <h2 style="margin-top:22px">Raw JSON</h2>
+        <pre id="rawJson">{}</pre>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const messageEl = document.getElementById('message');
+    const runBtn = document.getElementById('runBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const queryEl = document.getElementById('query');
+    const reportTextEl = document.getElementById('reportText');
+    const fileEl = document.getElementById('file');
+    const summaryEl = document.getElementById('summary');
+    const companiesEl = document.getElementById('companies');
+    const metricsTable = document.getElementById('metricsTable');
+    const metricsBody = document.getElementById('metricsBody');
+    const auditLogEl = document.getElementById('auditLog');
+    const rawJsonEl = document.getElementById('rawJson');
+
+    async function checkHealth() {
+      try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        statusEl.textContent = data.status === 'ok' ? 'API online' : 'API unavailable';
+      } catch (error) {
+        statusEl.textContent = 'API offline';
+      }
+    }
+
+    function setMessage(text, isError = false) {
+      messageEl.textContent = text;
+      messageEl.className = isError ? 'message error' : 'message';
+    }
+
+    function pct(value) {
+      if (value === undefined || value === null || value === '') return '-';
+      return `${(Number(value) * 100).toFixed(1)}%`;
+    }
+
+    function renderResult(data) {
+      summaryEl.textContent = data.summary || 'No summary returned.';
+      summaryEl.classList.remove('empty');
+      companiesEl.innerHTML = (data.companies || []).map((company) => `<span class="chip">${company}</span>`).join('');
+
+      const metrics = data.metrics || {};
+      metricsBody.innerHTML = Object.entries(metrics).map(([company, row]) => `
+        <tr>
+          <td>${company}</td>
+          <td>${pct(row.ebitda_margin)}</td>
+          <td>${pct(row.r_and_d_intensity)}</td>
+          <td>${row.supply_chain_risk || '-'}</td>
+        </tr>
+      `).join('');
+      metricsTable.style.display = Object.keys(metrics).length ? '' : 'none';
+
+      auditLogEl.innerHTML = (data.audit_log || []).map((event) => `
+        <div class="event">
+          <strong>${event.step} · ${event.status}</strong>
+          <span>${event.detail}</span>
+        </div>
+      `).join('');
+      rawJsonEl.textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function runAnalysis() {
+      const query = queryEl.value.trim();
+      if (!query) {
+        setMessage('Enter a query first.', true);
+        return;
+      }
+
+      runBtn.disabled = true;
+      setMessage('Running analysis...');
+
+      try {
+        let response;
+        if (fileEl.files.length) {
+          const form = new FormData();
+          form.append('query', query);
+          form.append('file', fileEl.files[0]);
+          response = await fetch('/api/v1/analyze-upload', { method: 'POST', body: form });
+        } else {
+          response = await fetch('/api/v1/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, report_text: reportTextEl.value.trim() || null }),
+          });
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || response.statusText);
+        }
+
+        const data = await response.json();
+        renderResult(data);
+        setMessage('Analysis complete.');
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, true);
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    clearBtn.addEventListener('click', () => {
+      reportTextEl.value = '';
+      fileEl.value = '';
+      summaryEl.textContent = 'No analysis yet.';
+      summaryEl.classList.add('empty');
+      companiesEl.innerHTML = '';
+      metricsBody.innerHTML = '';
+      metricsTable.style.display = 'none';
+      auditLogEl.innerHTML = '';
+      rawJsonEl.textContent = '{}';
+      setMessage('');
+    });
+
+    runBtn.addEventListener('click', runAnalysis);
+    checkHealth();
+  </script>
+</body>
+</html>
