@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+from .documents import parse_report_file
 from .state import AnalysisState, checkpoint, record_event
 from .tools import build_summary, calculate_metrics, extract_companies
 
@@ -28,11 +27,10 @@ def run_analysis(query: str, report_path: str | None = None, report_text: str | 
 
 
 def load_report(state: AnalysisState, report_path: str) -> None:
-    path = Path(report_path)
-    text = path.read_text(encoding="utf-8")
-    state["report_source"] = str(path)
+    text, source = parse_report_file(report_path)
+    state["report_source"] = source
     state["report_text"] = text
-    record_event(state, "load_report", "ok", f"Loaded report text from {path.name}.")
+    record_event(state, "load_report", "ok", f"Loaded report text from {source}.")
 
 
 def load_report_text(state: AnalysisState, report_text: str) -> None:

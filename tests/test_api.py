@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import fitz
 from fastapi.testclient import TestClient
 
 from golden_repo_retriever.api.app import create_app
@@ -55,6 +56,36 @@ class ApiTestCase(unittest.TestCase):
             exported = json.loads(output_path.read_text(encoding="utf-8"))
 
         self.assertEqual(exported["companies"], ["Apple"])
+
+    def test_analyze_upload_text_report(self) -> None:
+        response = self.client.post(
+            "/api/v1/analyze-upload",
+            data={"query": "Read this report."},
+            files={"file": ("report.txt", b"Microsoft supply chain risk remains low.", "text/plain")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["companies"], ["Microsoft"])
+        self.assertEqual(payload["report_source"], "report.txt")
+
+    def test_analyze_upload_pdf_report(self) -> None:
+        pdf = fitz.open()
+        page = pdf.new_page()
+        page.insert_text((72, 72), "Apple R&D investment remains strong.")
+        content = pdf.tobytes()
+        pdf.close()
+
+        response = self.client.post(
+            "/api/v1/analyze-upload",
+            data={"query": "Read this report."},
+            files={"file": ("apple_report.pdf", content, "application/pdf")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["companies"], ["Apple"])
+        self.assertEqual(payload["report_source"], "apple_report.pdf")
 
 
 if __name__ == "__main__":

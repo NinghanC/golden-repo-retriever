@@ -31,7 +31,7 @@ Run with a custom query:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --query "Read finance report for Simba."
 ```
 
-Include a local text report:
+Include a local text or PDF report:
 
 ```powershell
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --file samples\microsoft_report.txt
@@ -69,6 +69,14 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze `
   -d "{\"query\":\"Compare Apple and Microsoft.\"}"
 ```
 
+Upload a report through the API:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
+  -F "query=Read this finance report." `
+  -F "file=@samples\microsoft_report.txt"
+```
+
 ## Test
 
 ```powershell
@@ -78,7 +86,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze `
 ## Current Workflow
 
 ```text
-CLI/API -> query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
+CLI/API -> query -> optional text/PDF report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
 ```
 
 The repo includes a small shared state object and audit log.
@@ -87,5 +95,4 @@ The repo includes a small shared state object and audit log.
 
 - Add more companies.
 - Add more metrics.
-- Add PDF parsing.
-- Add uploaded report files to the API.
+- Add richer report extraction.

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
+from ..documents import parse_report_upload
 from ..reporting import export_result
 from ..workflow import run_analysis
 from .schemas import AnalyzeRequest, AnalyzeResponse, ConfigResponse, HealthResponse
@@ -26,8 +27,9 @@ def create_app() -> FastAPI:
             workflow=["query", "report_text", "state", "companies", "metrics", "summary", "audit_log"],
             features={
                 "local_text_reports": True,
+                "upload_reports": True,
                 "json_export": True,
-                "pdf_parsing": False,
+                "pdf_parsing": True,
             },
         )
 
@@ -36,6 +38,23 @@ def create_app() -> FastAPI:
         result = run_analysis(payload.query, report_text=payload.report_text)
         if payload.export_path:
             result["export_path"] = export_result(result, payload.export_path)
+        return AnalyzeResponse(**result)
+
+    @app.post("/api/v1/analyze-upload", response_model=AnalyzeResponse)
+    async def analyze_upload(
+        query: str = Form(...),
+        export_path: str | None = Form(default=None),
+        file: UploadFile = File(...),
+    ) -> AnalyzeResponse:
+        try:
+            report_text, source = parse_report_upload(file.filename or "report.txt", await file.read())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        result = run_analysis(query, report_text=report_text)
+        result["report_source"] = source
+        if export_path:
+            result["export_path"] = export_result(result, export_path)
         return AnalyzeResponse(**result)
 
     return app
