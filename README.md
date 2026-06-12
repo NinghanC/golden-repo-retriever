@@ -19,6 +19,8 @@ uv pip install -e .
 
 ## Run
 
+Run the CLI:
+
 ```powershell
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli
 ```
@@ -47,6 +49,26 @@ Save the full result:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --output outputs\analysis.json
 ```
 
+Run the API:
+
+```powershell
+.\.venv\Scripts\python.exe start_api.py
+```
+
+Health check:
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+Analyze through the API:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/analyze `
+  -H "Content-Type: application/json" `
+  -d "{\"query\":\"Compare Apple and Microsoft.\"}"
+```
+
 ## Test
 
 ```powershell
@@ -56,7 +78,7 @@ Save the full result:
 ## Current Workflow
 
 ```text
-query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
+CLI/API -> query -> optional text report -> state -> company detection -> sample data -> metrics -> summary -> audit log -> optional export
 ```
 
 The repo includes a small shared state object and audit log.
@@ -66,4 +88,4 @@ The repo includes a small shared state object and audit log.
 - Add more companies.
 - Add more metrics.
 - Add PDF parsing.
-- Add an API.
+- Add uploaded report files to the API.

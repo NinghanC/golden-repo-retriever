@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Local finance-report workflow for company metrics and summaries."
 requires-python = ">=3.11"
 dependencies = [
+  "fastapi",
   "httpx",
   "python-dotenv",
+  "uvicorn",
 ]
 
 [project.scripts]
