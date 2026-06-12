@@ -1,14 +1,18 @@
 # Golden Repo Retriever
 
-Golden Repo Retriever is a small local workflow for reading finance-report style data and producing a simple summary.
+Golden Repo Retriever is a local finance-analysis workflow for reading report-style input, detecting known companies, calculating basic metrics, and returning an auditable summary.
 
-Right now it:
+The project currently includes:
 
-1. Accepts a finance query from the command line.
-2. Finds known companies in the query.
-3. Loads sample financial data.
-4. Calculates basic metrics.
-5. Prints a short summary.
+- A command-line interface for quick local analysis.
+- A FastAPI service for JSON requests and report uploads.
+- A simple browser interface served by the API.
+- Text and PDF report parsing.
+- JSON result export.
+- A small agent workflow with retrieval, analysis, and synthesis phases.
+- Optional OpenAI, Mistral, or custom OpenAI-compatible summarization with local fallback.
+
+By default, the app uses local summarization. No cloud model is called unless a provider and API key are configured.
 
 ## Setup
 
@@ -17,9 +21,9 @@ uv venv --python 3.11
 uv pip install -e .
 ```
 
-## Run
+## CLI
 
-Run the CLI:
+Run the default analysis:
 
 ```powershell
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli
@@ -28,10 +32,10 @@ Run the CLI:
 Run with a custom query:
 
 ```powershell
-.\.venv\Scripts\python.exe -m golden_repo_retriever.cli --query "Read finance report for Simba."
+.\.venv\Scripts\python.exe -m golden_repo_retriever.cli --query "Compare Apple and Microsoft."
 ```
 
-Include a local text or PDF report:
+Analyze a local text or PDF report:
 
 ```powershell
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --file samples\microsoft_report.txt
@@ -43,7 +47,7 @@ Print JSON:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --json
 ```
 
-Save the full result:
+Export the full result:
 
 ```powershell
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --output outputs\analysis.json
@@ -55,9 +59,9 @@ Choose a summarization provider:
 .\.venv\Scripts\python.exe -m golden_repo_retriever.cli --llm-provider local
 ```
 
-The default provider is `local`, so no cloud model is called unless you configure a key and choose another provider.
+## API And Frontend
 
-Run the API:
+Start the API:
 
 ```powershell
 .\.venv\Scripts\python.exe start_api.py
@@ -83,7 +87,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze `
   -d "{\"query\":\"Compare Apple and Microsoft.\"}"
 ```
 
-Upload a report through the API:
+Upload a report:
 
 ```powershell
 curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
@@ -91,25 +95,11 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
   -F "file=@samples\microsoft_report.txt"
 ```
 
-## Test
+## LLM Providers
 
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-```
+The default provider is `local`.
 
-## Current Workflow
-
-```text
-frontend/CLI/API -> query -> optional text/PDF report -> state -> retrieval agent -> analyst agent -> synthesizer agent -> audit log -> optional export
-```
-
-The repo includes a small shared state object and audit log.
-
-## Optional LLM Providers
-
-By default, summaries are generated locally from calculated metrics.
-
-To enable OpenAI-compatible summarization, copy `.env.example` to `.env` and configure one provider:
+To enable OpenAI-compatible summarization, create a `.env` file and configure one provider:
 
 ```text
 LLM_PROVIDER=openai
@@ -127,8 +117,39 @@ MISTRAL_MODEL=mistral-small-latest
 
 If no key is present, the app falls back to local summarization.
 
-## Next Steps
+## Workflow
 
-- Add more companies.
-- Add more metrics.
-- Add richer report extraction.
+```text
+CLI/API/frontend
+  -> query and optional report
+  -> retrieval agent
+  -> analyst agent
+  -> synthesizer agent
+  -> audit log
+  -> optional JSON export
+```
+
+## Project Layout
+
+```text
+golden-repo-retriever/
+|-- src/golden_repo_retriever/
+|   |-- agents.py
+|   |-- cli.py
+|   |-- documents.py
+|   |-- llm.py
+|   |-- reporting.py
+|   |-- workflow.py
+|   `-- api/
+|-- static/
+|-- samples/
+|-- tests/
+|-- pyproject.toml
+`-- README.md
+```
+
+## Test
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
