@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -57,6 +57,10 @@
       grid-template-columns: 360px 1fr;
       gap: 20px;
       align-items: start;
+    }
+    .side {
+      display: grid;
+      gap: 16px;
     }
     section {
       background: var(--panel);
@@ -173,6 +177,36 @@
       color: var(--danger);
       font-weight: 700;
     }
+    .history-list {
+      display: grid;
+      gap: 8px;
+    }
+    .history-item {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcff;
+      color: var(--text);
+      text-align: left;
+      font-weight: 400;
+    }
+    .history-item strong {
+      display: block;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .empty {
       color: var(--muted);
     }
@@ -199,23 +233,40 @@
   </header>
   <main class="wrap">
     <div class="grid">
-      <section>
-        <h2>Analyze</h2>
-        <label for="query">Query</label>
-        <textarea id="query">Compare Apple and Microsoft on supply chain risk and R&amp;D investment.</textarea>
+      <div class="side">
+        <section>
+          <h2>Analyze</h2>
+          <label for="query">Query</label>
+          <textarea id="query">Compare Apple and Microsoft on supply chain risk and R&amp;D investment.</textarea>
 
-        <label for="reportText">Report Text</label>
-        <textarea id="reportText" placeholder="Optional report text"></textarea>
+          <label for="reportText">Report Text</label>
+          <textarea id="reportText" placeholder="Optional report text"></textarea>
 
-        <label for="file">Report File</label>
-        <input id="file" type="file" accept=".txt,.md,.pdf">
+          <label for="file">Report File</label>
+          <input id="file" type="file" accept=".txt,.md,.pdf">
 
-        <div class="actions">
-          <button id="runBtn" type="button">Run Analysis</button>
-          <button class="secondary" id="clearBtn" type="button">Clear</button>
-        </div>
-        <div class="message" id="message"></div>
-      </section>
+          <div class="actions">
+            <button id="runBtn" type="button">Run Analysis</button>
+            <button class="secondary" id="jobBtn" type="button">Run As Job</button>
+            <button class="secondary" id="clearBtn" type="button">Clear</button>
+          </div>
+          <div class="message" id="message"></div>
+        </section>
+
+        <section>
+          <h2>History</h2>
+          <div class="history-list" id="historyList">
+            <p class="empty">No saved analyses.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>Jobs</h2>
+          <div class="history-list" id="jobsList">
+            <p class="empty">No jobs.</p>
+          </div>
+        </section>
+      </div>
 
       <section>
         <h2>Result</h2>
@@ -246,6 +297,7 @@
     const statusEl = document.getElementById('status');
     const messageEl = document.getElementById('message');
     const runBtn = document.getElementById('runBtn');
+    const jobBtn = document.getElementById('jobBtn');
     const clearBtn = document.getElementById('clearBtn');
     const queryEl = document.getElementById('query');
     const reportTextEl = document.getElementById('reportText');
@@ -256,6 +308,8 @@
     const metricsBody = document.getElementById('metricsBody');
     const auditLogEl = document.getElementById('auditLog');
     const rawJsonEl = document.getElementById('rawJson');
+    const historyListEl = document.getElementById('historyList');
+    const jobsListEl = document.getElementById('jobsList');
 
     async function checkHealth() {
       try {
@@ -302,6 +356,59 @@
       rawJsonEl.textContent = JSON.stringify(data, null, 2);
     }
 
+    async function loadHistory() {
+      try {
+        const response = await fetch('/api/v1/analyses');
+        if (!response.ok) throw new Error(response.statusText);
+        const items = await response.json();
+        if (!items.length) {
+          historyListEl.innerHTML = '<p class="empty">No saved analyses.</p>';
+          return;
+        }
+        historyListEl.innerHTML = items.map((item) => `
+          <button class="history-item" type="button" data-id="${item.id}">
+            <strong>${item.query}</strong>
+            <span>${item.companies || 'No companies'} - ${new Date(item.created_at).toLocaleString()}</span>
+          </button>
+        `).join('');
+      } catch (error) {
+        historyListEl.innerHTML = '<p class="empty">History unavailable.</p>';
+      }
+    }
+
+    async function loadAnalysis(id) {
+      try {
+        setMessage('Loading saved analysis...');
+        const response = await fetch(`/api/v1/analyses/${id}`);
+        if (!response.ok) throw new Error(response.statusText);
+        const data = await response.json();
+        renderResult(data);
+        setMessage('Saved analysis loaded.');
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, true);
+      }
+    }
+
+    async function loadJobs() {
+      try {
+        const response = await fetch('/api/v1/jobs');
+        if (!response.ok) throw new Error(response.statusText);
+        const items = await response.json();
+        if (!items.length) {
+          jobsListEl.innerHTML = '<p class="empty">No jobs.</p>';
+          return;
+        }
+        jobsListEl.innerHTML = items.map((item) => `
+          <button class="history-item" type="button" data-job-id="${item.id}" data-analysis-id="${item.analysis_id || ''}">
+            <strong>#${item.id} ${item.status}</strong>
+            <span>${item.query}</span>
+          </button>
+        `).join('');
+      } catch (error) {
+        jobsListEl.innerHTML = '<p class="empty">Jobs unavailable.</p>';
+      }
+    }
+
     async function runAnalysis() {
       const query = queryEl.value.trim();
       if (!query) {
@@ -334,11 +441,47 @@
 
         const data = await response.json();
         renderResult(data);
+        await loadHistory();
         setMessage('Analysis complete.');
       } catch (error) {
         setMessage(`Error: ${error.message}`, true);
       } finally {
         runBtn.disabled = false;
+      }
+    }
+
+    async function createJob() {
+      const query = queryEl.value.trim();
+      if (!query) {
+        setMessage('Enter a query first.', true);
+        return;
+      }
+      if (fileEl.files.length) {
+        setMessage('Background jobs currently use query and report text only.', true);
+        return;
+      }
+
+      jobBtn.disabled = true;
+      setMessage('Submitting job...');
+
+      try {
+        const response = await fetch('/api/v1/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, report_text: reportTextEl.value.trim() || null }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || response.statusText);
+        }
+
+        await loadJobs();
+        setMessage('Job submitted.');
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, true);
+      } finally {
+        jobBtn.disabled = false;
       }
     }
 
@@ -355,8 +498,35 @@
       setMessage('');
     });
 
+    historyListEl.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-id]');
+      if (!button) return;
+      loadAnalysis(button.dataset.id);
+    });
+
+    jobsListEl.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-job-id]');
+      if (!button) return;
+      const response = await fetch(`/api/v1/jobs/${button.dataset.jobId}`);
+      if (!response.ok) {
+        setMessage('Job unavailable.', true);
+        return;
+      }
+      const job = await response.json();
+      await loadJobs();
+      if (job.analysis_id) {
+        loadAnalysis(job.analysis_id);
+      } else {
+        setMessage(`Job ${job.id} is ${job.status}.`);
+      }
+    });
+
     runBtn.addEventListener('click', runAnalysis);
+    jobBtn.addEventListener('click', createJob);
     checkHealth();
+    loadHistory();
+    loadJobs();
+    setInterval(loadJobs, 4000);
   </script>
 </body>
 </html>

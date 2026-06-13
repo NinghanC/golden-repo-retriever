@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -13,7 +14,12 @@ from golden_repo_retriever.api.app import create_app
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = TestClient(create_app())
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        database_path = Path(self.tmp_dir.name) / "api-test.db"
+        self.client = TestClient(create_app(database_path=database_path))
+
+    def tearDown(self) -> None:
+        self.tmp_dir.cleanup()
 
     def test_health(self) -> None:
         response = self.client.get("/health")
@@ -40,9 +46,76 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
+        self.assertIsInstance(payload["analysis_id"], int)
         self.assertEqual(payload["companies"], ["Apple", "Microsoft"])
         self.assertEqual(payload["llm_provider"], "local")
         self.assertIn("summary", payload)
+
+    def test_analysis_history_returns_saved_result(self) -> None:
+        created = self.client.post("/api/v1/analyze", json={"query": "Compare Apple."}).json()
+
+        list_response = self.client.get("/api/v1/analyses")
+
+        self.assertEqual(list_response.status_code, 200)
+        history = list_response.json()
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["id"], created["analysis_id"])
+        self.assertEqual(history[0]["companies"], "Apple")
+
+        detail_response = self.client.get(f"/api/v1/analyses/{created['analysis_id']}")
+
+        self.assertEqual(detail_response.status_code, 200)
+        detail = detail_response.json()
+        self.assertEqual(detail["analysis_id"], created["analysis_id"])
+        self.assertEqual(detail["companies"], ["Apple"])
+
+    def test_missing_analysis_returns_404(self) -> None:
+        response = self.client.get("/api/v1/analyses/999")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_job_runs_analysis_and_links_result(self) -> None:
+        response = self.client.post("/api/v1/jobs", json={"query": "Compare Microsoft."})
+
+        self.assertEqual(response.status_code, 202)
+        job = response.json()
+        self.assertIn(job["status"], ["queued", "running", "completed"])
+
+        completed = self.wait_for_job(job["id"])
+
+        self.assertEqual(completed["status"], "completed")
+        self.assertIsInstance(completed["analysis_id"], int)
+
+        detail_response = self.client.get(f"/api/v1/analyses/{completed['analysis_id']}")
+
+        self.assertEqual(detail_response.status_code, 200)
+        detail = detail_response.json()
+        self.assertEqual(detail["companies"], ["Microsoft"])
+
+    def test_jobs_can_be_listed(self) -> None:
+        created = self.client.post("/api/v1/jobs", json={"query": "Compare Apple."}).json()
+        self.wait_for_job(created["id"])
+
+        response = self.client.get("/api/v1/jobs")
+
+        self.assertEqual(response.status_code, 200)
+        jobs = response.json()
+        self.assertEqual(jobs[0]["id"], created["id"])
+
+    def test_missing_job_returns_404(self) -> None:
+        response = self.client.get("/api/v1/jobs/999")
+
+        self.assertEqual(response.status_code, 404)
+
+    def wait_for_job(self, job_id: int) -> dict[str, object]:
+        for _ in range(20):
+            response = self.client.get(f"/api/v1/jobs/{job_id}")
+            self.assertEqual(response.status_code, 200)
+            job = response.json()
+            if job["status"] in ["completed", "failed"]:
+                return job
+            time.sleep(0.05)
+        self.fail(f"Job {job_id} did not finish.")
 
     def test_analyze_uses_report_text(self) -> None:
         response = self.client.post(

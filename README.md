@@ -9,6 +9,8 @@ The project currently includes:
 - A simple browser interface served by the API.
 - Text and PDF report parsing.
 - JSON result export.
+- Local analysis history backed by SQLite.
+- Background analysis jobs with status tracking.
 - A small agent workflow with retrieval, analysis, and synthesis phases.
 - Optional OpenAI, Mistral, or custom OpenAI-compatible summarization with local fallback.
 
@@ -95,6 +97,32 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
   -F "file=@samples\microsoft_report.txt"
 ```
 
+List saved analyses:
+
+```powershell
+curl http://127.0.0.1:8000/api/v1/analyses
+```
+
+Load one saved analysis:
+
+```powershell
+curl http://127.0.0.1:8000/api/v1/analyses/1
+```
+
+Create a background job:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/jobs `
+  -H "Content-Type: application/json" `
+  -d "{\"query\":\"Compare Apple and Microsoft.\"}"
+```
+
+List jobs:
+
+```powershell
+curl http://127.0.0.1:8000/api/v1/jobs
+```
+
 ## LLM Providers
 
 The default provider is `local`.
@@ -125,6 +153,8 @@ CLI/API/frontend
   -> retrieval agent
   -> analyst agent
   -> synthesizer agent
+  -> background job status
+  -> local history store
   -> audit log
   -> optional JSON export
 ```
@@ -139,6 +169,7 @@ golden-repo-retriever/
 |   |-- documents.py
 |   |-- llm.py
 |   |-- reporting.py
+|   |-- storage.py
 |   |-- workflow.py
 |   `-- api/
 |-- static/

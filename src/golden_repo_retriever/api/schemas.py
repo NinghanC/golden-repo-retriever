@@ -13,6 +13,8 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
+    analysis_id: int | None = None
+    created_at: str | None = None
     query: str
     companies: list[str]
     metrics: dict[str, dict[str, float | str]]
@@ -34,3 +36,29 @@ class ConfigResponse(BaseModel):
     version: str
     workflow: list[str]
     features: dict[str, Any]
+
+
+class AnalysisHistoryItem(BaseModel):
+    id: int
+    created_at: str
+    query: str
+    companies: str
+    summary: str
+
+
+class JobRequest(BaseModel):
+    query: str = Field(..., description="Finance analysis query.")
+    report_text: str | None = Field(default=None, description="Optional plain-text report content.")
+    llm_provider: str | None = Field(default=None, description="Optional provider: local, openai, mistral, or custom.")
+
+
+class JobResponse(BaseModel):
+    id: int
+    status: str
+    query: str
+    created_at: str
+    updated_at: str
+    error: str | None = None
+    analysis_id: int | None = None
+    report_text: str | None = None
+    llm_provider: str | None = None
