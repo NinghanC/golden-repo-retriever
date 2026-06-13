@@ -10,16 +10,21 @@ def extract_companies(query: str, report_text: str = "") -> list[str]:
     return companies or ["Apple", "Microsoft"]
 
 
-def calculate_metrics(company: str) -> dict[str, float | str]:
-    """Calculate the first useful finance ratios from sample data."""
+def calculate_metrics(company: str, facts: dict[str, float | str] | None = None) -> dict[str, float | str]:
+    """Calculate finance ratios from extracted facts, with sample data fallback."""
+    facts = facts or {}
     data = SAMPLE_FINANCIAL_DATA[company]
-    revenue = data["revenue"]
-    ebitda = data["ebitda"]
-    r_and_d = data["r_and_d"]
+    revenue = float(facts.get("revenue", data["revenue"]))
+    ebitda = float(facts.get("ebitda", data["ebitda"]))
+    r_and_d = float(facts.get("r_and_d", data["r_and_d"]))
+    ebitda_margin = facts.get("ebitda_margin")
+    r_and_d_intensity = facts.get("r_and_d_intensity")
     return {
-        "ebitda_margin": round(ebitda / revenue, 4),
-        "r_and_d_intensity": round(r_and_d / revenue, 4),
-        "supply_chain_risk": data["supply_chain_risk"],
+        "ebitda_margin": round(float(ebitda_margin), 4) if ebitda_margin is not None else round(ebitda / revenue, 4),
+        "r_and_d_intensity": (
+            round(float(r_and_d_intensity), 4) if r_and_d_intensity is not None else round(r_and_d / revenue, 4)
+        ),
+        "supply_chain_risk": str(facts.get("supply_chain_risk", data["supply_chain_risk"])),
     }
 
 

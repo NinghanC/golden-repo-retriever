@@ -8,6 +8,7 @@ The project currently includes:
 - A FastAPI service for JSON requests and report uploads.
 - A simple browser interface served by the API.
 - Text and PDF report parsing.
+- Simple financial fact extraction from report text.
 - JSON result export.
 - Local analysis history backed by SQLite.
 - Background analysis jobs with status tracking.
@@ -150,6 +151,7 @@ If no key is present, the app falls back to local summarization.
 ```text
 CLI/API/frontend
   -> query and optional report
+  -> extracted financial facts
   -> retrieval agent
   -> analyst agent
   -> synthesizer agent
@@ -167,6 +169,7 @@ golden-repo-retriever/
 |   |-- agents.py
 |   |-- cli.py
 |   |-- documents.py
+|   |-- extraction.py
 |   |-- llm.py
 |   |-- reporting.py
 |   |-- storage.py

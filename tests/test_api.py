@@ -122,13 +122,14 @@ class ApiTestCase(unittest.TestCase):
             "/api/v1/analyze",
             json={
                 "query": "Read this report.",
-                "report_text": "Microsoft supply chain risk remains low.",
+                "report_text": "Microsoft revenue was $245.1 billion. Microsoft supply chain risk remains low.",
             },
         )
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["companies"], ["Microsoft"])
+        self.assertEqual(payload["extracted_facts"]["Microsoft"]["revenue"], 245.1)
         self.assertEqual(payload["audit_log"][0]["step"], "load_report")
 
     def test_analyze_can_export_json(self) -> None:

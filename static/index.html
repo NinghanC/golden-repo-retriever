@@ -272,6 +272,22 @@
         <h2>Result</h2>
         <p class="summary empty" id="summary">No analysis yet.</p>
         <div class="chips" id="companies"></div>
+
+        <h2 style="margin-top:22px">Extracted Facts</h2>
+        <table id="factsTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Revenue</th>
+              <th>EBITDA</th>
+              <th>R&amp;D</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="factsBody"></tbody>
+        </table>
+
+        <h2 style="margin-top:22px">Metrics</h2>
         <table id="metricsTable" style="display:none">
           <thead>
             <tr>
@@ -304,6 +320,8 @@
     const fileEl = document.getElementById('file');
     const summaryEl = document.getElementById('summary');
     const companiesEl = document.getElementById('companies');
+    const factsTable = document.getElementById('factsTable');
+    const factsBody = document.getElementById('factsBody');
     const metricsTable = document.getElementById('metricsTable');
     const metricsBody = document.getElementById('metricsBody');
     const auditLogEl = document.getElementById('auditLog');
@@ -331,10 +349,27 @@
       return `${(Number(value) * 100).toFixed(1)}%`;
     }
 
+    function amount(value) {
+      if (value === undefined || value === null || value === '') return '-';
+      return `$${Number(value).toFixed(1)}B`;
+    }
+
     function renderResult(data) {
       summaryEl.textContent = data.summary || 'No summary returned.';
       summaryEl.classList.remove('empty');
       companiesEl.innerHTML = (data.companies || []).map((company) => `<span class="chip">${company}</span>`).join('');
+
+      const facts = data.extracted_facts || {};
+      factsBody.innerHTML = Object.entries(facts).map(([company, row]) => `
+        <tr>
+          <td>${company}</td>
+          <td>${amount(row.revenue)}</td>
+          <td>${amount(row.ebitda)}</td>
+          <td>${amount(row.r_and_d)}</td>
+          <td>${row.supply_chain_risk || '-'}</td>
+        </tr>
+      `).join('');
+      factsTable.style.display = Object.keys(facts).length ? '' : 'none';
 
       const metrics = data.metrics || {};
       metricsBody.innerHTML = Object.entries(metrics).map(([company, row]) => `
@@ -491,6 +526,8 @@
       summaryEl.textContent = 'No analysis yet.';
       summaryEl.classList.add('empty');
       companiesEl.innerHTML = '';
+      factsBody.innerHTML = '';
+      factsTable.style.display = 'none';
       metricsBody.innerHTML = '';
       metricsTable.style.display = 'none';
       auditLogEl.innerHTML = '';

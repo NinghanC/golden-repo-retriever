@@ -33,6 +33,23 @@ class WorkflowTestCase(unittest.TestCase):
         self.assertEqual(result["audit_log"][0]["step"], "load_report")
         self.assertEqual(result["checkpoint_count"], 4)
 
+    def test_run_analysis_uses_extracted_report_metrics(self) -> None:
+        result = run_analysis(
+            "Read this finance report.",
+            report_text=(
+                "Microsoft revenue was $245.1 billion. "
+                "Microsoft EBITDA margin was 53%. "
+                "Microsoft R&D was $29.5 billion. "
+                "Microsoft supply chain risk remains low."
+            ),
+        )
+
+        self.assertEqual(result["companies"], ["Microsoft"])
+        self.assertEqual(result["extracted_facts"]["Microsoft"]["revenue"], 245.1)
+        self.assertEqual(result["metrics"]["Microsoft"]["ebitda_margin"], 0.53)
+        self.assertEqual(result["metrics"]["Microsoft"]["r_and_d_intensity"], 0.1204)
+        self.assertEqual(result["metrics"]["Microsoft"]["supply_chain_risk"], "low")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,7 @@ class AnalyzeResponse(BaseModel):
     created_at: str | None = None
     query: str
     companies: list[str]
+    extracted_facts: dict[str, dict[str, float | str]] = Field(default_factory=dict)
     metrics: dict[str, dict[str, float | str]]
     summary: str
     llm_provider: str

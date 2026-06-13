@@ -14,6 +14,7 @@ class AnalysisState(TypedDict, total=False):
     report_source: str
     report_text: str
     companies: list[str]
+    extracted_facts: dict[str, dict[str, float | str]]
     metrics: dict[str, dict[str, float | str]]
     summary: str
     llm_provider: str
