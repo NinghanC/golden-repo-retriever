@@ -20,6 +20,8 @@ from .schemas import (
     HealthResponse,
     JobRequest,
     JobResponse,
+    ReportListItem,
+    ReportResponse,
 )
 
 
@@ -46,15 +48,31 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
             return
         active_store.start_job(job_id)
         try:
+            report_text = job.get("report_text")
+            if job.get("report_id") is not None:
+                report = active_store.get_report(int(job["report_id"]))
+                if report is None:
+                    raise ValueError("Report not found.")
+                report_text = report["text"]
             result = run_analysis(
                 job["query"],
-                report_text=job.get("report_text"),
+                report_text=report_text,
                 llm_provider=job.get("llm_provider"),
             )
+            if job.get("report_id") is not None:
+                result["report_source"] = f"report:{job['report_id']}"
             analysis_id = active_store.save(result)
             active_store.complete_job(job_id, analysis_id)
         except Exception as exc:
             active_store.fail_job(job_id, str(exc))
+
+    def report_text_from_payload(report_id: int | None, report_text: str | None) -> tuple[str | None, str | None]:
+        if report_id is None:
+            return report_text, None
+        report = get_store().get_report(report_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="Report not found.")
+        return report["text"], f"report:{report_id}"
 
     @app.get("/")
     def root() -> RedirectResponse:
@@ -78,6 +96,8 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
                 "pdf_parsing": True,
                 "history": True,
                 "background_jobs": True,
+                "report_library": True,
+                "evidence": True,
                 "llm_provider": llm_settings.provider,
                 "llm_enabled": bool(llm_settings.api_key),
             },
@@ -85,7 +105,10 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
 
     @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
     def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
-        result = run_analysis(payload.query, report_text=payload.report_text, llm_provider=payload.llm_provider)
+        report_text, report_source = report_text_from_payload(payload.report_id, payload.report_text)
+        result = run_analysis(payload.query, report_text=report_text, llm_provider=payload.llm_provider)
+        if report_source:
+            result["report_source"] = report_source
         if payload.export_path:
             result["export_path"] = export_result(result, payload.export_path)
         result["analysis_id"] = get_store().save(result)
@@ -122,12 +145,41 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
             raise HTTPException(status_code=404, detail="Analysis not found.")
         return AnalyzeResponse(**result)
 
+    @app.post("/api/v1/reports", response_model=ReportResponse, status_code=201)
+    async def create_report(file: UploadFile = File(...)) -> ReportResponse:
+        try:
+            report_text, source = parse_report_upload(file.filename or "report.txt", await file.read())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        report_id = get_store().save_report(
+            filename=file.filename or source,
+            source=source,
+            text=report_text,
+            content_type=file.content_type,
+        )
+        report = get_store().get_report(report_id)
+        assert report is not None
+        return ReportResponse(**report)
+
+    @app.get("/api/v1/reports", response_model=list[ReportListItem])
+    def list_reports(limit: int = 20) -> list[ReportListItem]:
+        safe_limit = max(1, min(limit, 100))
+        return [ReportListItem(**item) for item in get_store().list_reports(limit=safe_limit)]
+
+    @app.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
+    def get_report(report_id: int) -> ReportResponse:
+        report = get_store().get_report(report_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="Report not found.")
+        return ReportResponse(**report)
+
     @app.post("/api/v1/jobs", response_model=JobResponse, status_code=202)
     def create_job(payload: JobRequest) -> JobResponse:
         active_store = get_store()
         job_id = active_store.create_job(
             query=payload.query,
             report_text=payload.report_text,
+            report_id=payload.report_id,
             llm_provider=payload.llm_provider,
         )
         Thread(target=run_job, args=(job_id,), daemon=True).start()

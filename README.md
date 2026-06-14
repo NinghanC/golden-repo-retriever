@@ -8,7 +8,9 @@ The project currently includes:
 - A FastAPI service for JSON requests and report uploads.
 - A simple browser interface served by the API.
 - Text and PDF report parsing.
+- A saved report library for uploaded documents.
 - Simple financial fact extraction from report text.
+- Evidence snippets for extracted financial facts.
 - JSON result export.
 - Local analysis history backed by SQLite.
 - Background analysis jobs with status tracking.
@@ -98,6 +100,21 @@ curl -X POST http://127.0.0.1:8000/api/v1/analyze-upload `
   -F "file=@samples\microsoft_report.txt"
 ```
 
+Save a report to the report library:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/reports `
+  -F "file=@samples\microsoft_report.txt"
+```
+
+Analyze a saved report:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/analyze `
+  -H "Content-Type: application/json" `
+  -d "{\"query\":\"Read this report.\",\"report_id\":1}"
+```
+
 List saved analyses:
 
 ```powershell
@@ -116,6 +133,14 @@ Create a background job:
 curl -X POST http://127.0.0.1:8000/api/v1/jobs `
   -H "Content-Type: application/json" `
   -d "{\"query\":\"Compare Apple and Microsoft.\"}"
+```
+
+Create a background job for a saved report:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/jobs `
+  -H "Content-Type: application/json" `
+  -d "{\"query\":\"Read this report.\",\"report_id\":1}"
 ```
 
 List jobs:
@@ -150,8 +175,9 @@ If no key is present, the app falls back to local summarization.
 
 ```text
 CLI/API/frontend
-  -> query and optional report
+  -> query and optional saved report
   -> extracted financial facts
+  -> evidence snippets
   -> retrieval agent
   -> analyst agent
   -> synthesizer agent

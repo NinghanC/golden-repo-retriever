@@ -72,6 +72,7 @@ class AnalysisStore:
         self,
         query: str,
         report_text: str | None = None,
+        report_id: int | None = None,
         llm_provider: str | None = None,
     ) -> int:
         timestamp = _now()
@@ -79,6 +80,7 @@ class AnalysisStore:
             {
                 "query": query,
                 "report_text": report_text,
+                "report_id": report_id,
                 "llm_provider": llm_provider,
             },
             ensure_ascii=True,
@@ -106,14 +108,20 @@ class AnalysisStore:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, status, query, created_at, updated_at, error, analysis_id
+                SELECT id, status, query, payload, created_at, updated_at, error, analysis_id
                 FROM jobs
                 ORDER BY id DESC
                 LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
-        return [dict(row) for row in rows]
+        jobs = []
+        for row in rows:
+            job = dict(row)
+            payload = json.loads(job.pop("payload"))
+            job.update(payload)
+            jobs.append(job)
+        return jobs
 
     def get_job(self, job_id: int) -> dict[str, Any] | None:
         with self._connect() as connection:
@@ -131,6 +139,49 @@ class AnalysisStore:
         payload = json.loads(job.pop("payload"))
         job.update(payload)
         return job
+
+    def save_report(
+        self,
+        filename: str,
+        source: str,
+        text: str,
+        content_type: str | None = None,
+    ) -> int:
+        created_at = _now()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO reports (filename, source, content_type, text, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (filename, source, content_type, text, created_at),
+            )
+            return int(cursor.lastrowid)
+
+    def list_reports(self, limit: int = 20) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, filename, source, content_type, text, created_at
+                FROM reports
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_report(self, report_id: int) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, filename, source, content_type, text, created_at
+                FROM reports
+                WHERE id = ?
+                """,
+                (report_id,),
+            ).fetchone()
+        return dict(row) if row is not None else None
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -158,6 +209,18 @@ class AnalysisStore:
                     error TEXT,
                     analysis_id INTEGER,
                     FOREIGN KEY (analysis_id) REFERENCES analyses(id)
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    content_type TEXT,
+                    text TEXT NOT NULL,
+                    created_at TEXT NOT NULL
                 )
                 """
             )

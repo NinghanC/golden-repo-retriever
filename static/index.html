@@ -248,9 +248,17 @@
           <div class="actions">
             <button id="runBtn" type="button">Run Analysis</button>
             <button class="secondary" id="jobBtn" type="button">Run As Job</button>
+            <button class="secondary" id="uploadReportBtn" type="button">Save Report</button>
             <button class="secondary" id="clearBtn" type="button">Clear</button>
           </div>
           <div class="message" id="message"></div>
+        </section>
+
+        <section>
+          <h2>Reports</h2>
+          <div class="history-list" id="reportsList">
+            <p class="empty">No saved reports.</p>
+          </div>
         </section>
 
         <section>
@@ -287,6 +295,9 @@
           <tbody id="factsBody"></tbody>
         </table>
 
+        <h2 style="margin-top:22px">Evidence</h2>
+        <div class="audit" id="evidenceLog"></div>
+
         <h2 style="margin-top:22px">Metrics</h2>
         <table id="metricsTable" style="display:none">
           <thead>
@@ -314,6 +325,7 @@
     const messageEl = document.getElementById('message');
     const runBtn = document.getElementById('runBtn');
     const jobBtn = document.getElementById('jobBtn');
+    const uploadReportBtn = document.getElementById('uploadReportBtn');
     const clearBtn = document.getElementById('clearBtn');
     const queryEl = document.getElementById('query');
     const reportTextEl = document.getElementById('reportText');
@@ -325,9 +337,12 @@
     const metricsTable = document.getElementById('metricsTable');
     const metricsBody = document.getElementById('metricsBody');
     const auditLogEl = document.getElementById('auditLog');
+    const evidenceLogEl = document.getElementById('evidenceLog');
     const rawJsonEl = document.getElementById('rawJson');
+    const reportsListEl = document.getElementById('reportsList');
     const historyListEl = document.getElementById('historyList');
     const jobsListEl = document.getElementById('jobsList');
+    let selectedReportId = null;
 
     async function checkHealth() {
       try {
@@ -371,6 +386,19 @@
       `).join('');
       factsTable.style.display = Object.keys(facts).length ? '' : 'none';
 
+      const evidence = data.evidence || {};
+      evidenceLogEl.innerHTML = Object.entries(evidence).flatMap(([company, items]) =>
+        items.map((item) => `
+          <div class="event">
+            <strong>${company} - ${item.field}</strong>
+            <span>${item.snippet}</span>
+          </div>
+        `)
+      ).join('');
+      if (!evidenceLogEl.innerHTML) {
+        evidenceLogEl.innerHTML = '<p class="empty">No evidence extracted.</p>';
+      }
+
       const metrics = data.metrics || {};
       metricsBody.innerHTML = Object.entries(metrics).map(([company, row]) => `
         <tr>
@@ -384,11 +412,31 @@
 
       auditLogEl.innerHTML = (data.audit_log || []).map((event) => `
         <div class="event">
-          <strong>${event.step} · ${event.status}</strong>
+          <strong>${event.step} - ${event.status}</strong>
           <span>${event.detail}</span>
         </div>
       `).join('');
       rawJsonEl.textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function loadReports() {
+      try {
+        const response = await fetch('/api/v1/reports');
+        if (!response.ok) throw new Error(response.statusText);
+        const items = await response.json();
+        if (!items.length) {
+          reportsListEl.innerHTML = '<p class="empty">No saved reports.</p>';
+          return;
+        }
+        reportsListEl.innerHTML = items.map((item) => `
+          <button class="history-item" type="button" data-report-id="${item.id}">
+            <strong>#${item.id} ${item.filename}</strong>
+            <span>${new Date(item.created_at).toLocaleString()}</span>
+          </button>
+        `).join('');
+      } catch (error) {
+        reportsListEl.innerHTML = '<p class="empty">Reports unavailable.</p>';
+      }
     }
 
     async function loadHistory() {
@@ -456,7 +504,13 @@
 
       try {
         let response;
-        if (fileEl.files.length) {
+        if (selectedReportId) {
+          response = await fetch('/api/v1/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, report_id: selectedReportId }),
+          });
+        } else if (fileEl.files.length) {
           const form = new FormData();
           form.append('query', query);
           form.append('file', fileEl.files[0]);
@@ -485,13 +539,44 @@
       }
     }
 
+    async function uploadReport() {
+      if (!fileEl.files.length) {
+        setMessage('Choose a report file first.', true);
+        return;
+      }
+
+      uploadReportBtn.disabled = true;
+      setMessage('Saving report...');
+
+      try {
+        const form = new FormData();
+        form.append('file', fileEl.files[0]);
+        const response = await fetch('/api/v1/reports', { method: 'POST', body: form });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || response.statusText);
+        }
+
+        const report = await response.json();
+        selectedReportId = report.id;
+        reportTextEl.value = report.text || '';
+        await loadReports();
+        setMessage(`Report #${report.id} selected.`);
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, true);
+      } finally {
+        uploadReportBtn.disabled = false;
+      }
+    }
+
     async function createJob() {
       const query = queryEl.value.trim();
       if (!query) {
         setMessage('Enter a query first.', true);
         return;
       }
-      if (fileEl.files.length) {
+      if (fileEl.files.length && !selectedReportId) {
         setMessage('Background jobs currently use query and report text only.', true);
         return;
       }
@@ -503,7 +588,11 @@
         const response = await fetch('/api/v1/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, report_text: reportTextEl.value.trim() || null }),
+          body: JSON.stringify({
+            query,
+            report_id: selectedReportId,
+            report_text: selectedReportId ? null : reportTextEl.value.trim() || null,
+          }),
         });
 
         if (!response.ok) {
@@ -521,6 +610,7 @@
     }
 
     clearBtn.addEventListener('click', () => {
+      selectedReportId = null;
       reportTextEl.value = '';
       fileEl.value = '';
       summaryEl.textContent = 'No analysis yet.';
@@ -528,11 +618,27 @@
       companiesEl.innerHTML = '';
       factsBody.innerHTML = '';
       factsTable.style.display = 'none';
+      evidenceLogEl.innerHTML = '';
       metricsBody.innerHTML = '';
       metricsTable.style.display = 'none';
       auditLogEl.innerHTML = '';
       rawJsonEl.textContent = '{}';
       setMessage('');
+    });
+
+    reportsListEl.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-report-id]');
+      if (!button) return;
+      const response = await fetch(`/api/v1/reports/${button.dataset.reportId}`);
+      if (!response.ok) {
+        setMessage('Report unavailable.', true);
+        return;
+      }
+      const report = await response.json();
+      selectedReportId = report.id;
+      reportTextEl.value = report.text || '';
+      fileEl.value = '';
+      setMessage(`Report #${report.id} selected.`);
     });
 
     historyListEl.addEventListener('click', (event) => {
@@ -560,7 +666,9 @@
 
     runBtn.addEventListener('click', runAnalysis);
     jobBtn.addEventListener('click', createJob);
+    uploadReportBtn.addEventListener('click', uploadReport);
     checkHealth();
+    loadReports();
     loadHistory();
     loadJobs();
     setInterval(loadJobs, 4000);

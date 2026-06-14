@@ -76,6 +76,25 @@ class AnalysisStoreTestCase(unittest.TestCase):
         self.assertEqual(completed["analysis_id"], analysis_id)
         self.assertEqual(history[0]["id"], job_id)
 
+    def test_report_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            store = AnalysisStore(Path(tmp_dir) / "analyses.db")
+
+            report_id = store.save_report(
+                filename="microsoft.txt",
+                source="microsoft.txt",
+                text="Microsoft revenue was $245.1 billion.",
+                content_type="text/plain",
+            )
+            report = store.get_report(report_id)
+            reports = store.list_reports()
+
+        self.assertIsNotNone(report)
+        assert report is not None
+        self.assertEqual(report["filename"], "microsoft.txt")
+        self.assertEqual(report["text"], "Microsoft revenue was $245.1 billion.")
+        self.assertEqual(reports[0]["id"], report_id)
+
 
 if __name__ == "__main__":
     unittest.main()

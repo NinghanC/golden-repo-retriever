@@ -46,6 +46,8 @@ class WorkflowTestCase(unittest.TestCase):
 
         self.assertEqual(result["companies"], ["Microsoft"])
         self.assertEqual(result["extracted_facts"]["Microsoft"]["revenue"], 245.1)
+        self.assertEqual(result["evidence"]["Microsoft"][0]["field"], "revenue")
+        self.assertEqual(result["evidence"]["Microsoft"][0]["snippet"], "Microsoft revenue was $245.1 billion.")
         self.assertEqual(result["metrics"]["Microsoft"]["ebitda_margin"], 0.53)
         self.assertEqual(result["metrics"]["Microsoft"]["r_and_d_intensity"], 0.1204)
         self.assertEqual(result["metrics"]["Microsoft"]["supply_chain_risk"], "low")

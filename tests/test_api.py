@@ -130,7 +130,63 @@ class ApiTestCase(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["companies"], ["Microsoft"])
         self.assertEqual(payload["extracted_facts"]["Microsoft"]["revenue"], 245.1)
+        self.assertEqual(payload["evidence"]["Microsoft"][0]["snippet"], "Microsoft revenue was $245.1 billion.")
         self.assertEqual(payload["audit_log"][0]["step"], "load_report")
+
+    def test_reports_can_be_saved_and_used_for_analysis(self) -> None:
+        created = self.client.post(
+            "/api/v1/reports",
+            files={
+                "file": (
+                    "microsoft.txt",
+                    b"Microsoft revenue was $245.1 billion. Microsoft supply chain risk remains low.",
+                    "text/plain",
+                )
+            },
+        )
+
+        self.assertEqual(created.status_code, 201)
+        report = created.json()
+        self.assertEqual(report["filename"], "microsoft.txt")
+
+        listed = self.client.get("/api/v1/reports")
+
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual(listed.json()[0]["id"], report["id"])
+        self.assertNotIn("text", listed.json()[0])
+
+        analyzed = self.client.post(
+            "/api/v1/analyze",
+            json={"query": "Read this report.", "report_id": report["id"]},
+        )
+
+        self.assertEqual(analyzed.status_code, 200)
+        payload = analyzed.json()
+        self.assertEqual(payload["report_source"], f"report:{report['id']}")
+        self.assertEqual(payload["extracted_facts"]["Microsoft"]["revenue"], 245.1)
+
+    def test_report_backed_job_runs_analysis(self) -> None:
+        report = self.client.post(
+            "/api/v1/reports",
+            files={"file": ("apple.txt", b"Apple revenue was $412.0 billion.", "text/plain")},
+        ).json()
+
+        created = self.client.post(
+            "/api/v1/jobs",
+            json={"query": "Read this report.", "report_id": report["id"]},
+        ).json()
+        completed = self.wait_for_job(created["id"])
+
+        self.assertEqual(completed["status"], "completed")
+        self.assertEqual(completed["report_id"], report["id"])
+        analysis = self.client.get(f"/api/v1/analyses/{completed['analysis_id']}").json()
+        self.assertEqual(analysis["companies"], ["Apple"])
+        self.assertEqual(analysis["extracted_facts"]["Apple"]["revenue"], 412.0)
+
+    def test_missing_report_returns_404(self) -> None:
+        response = self.client.get("/api/v1/reports/999")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_analyze_can_export_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

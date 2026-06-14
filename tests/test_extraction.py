@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from golden_repo_retriever.extraction import extract_financial_facts
+from golden_repo_retriever.extraction import extract_financial_facts, extract_financial_facts_with_evidence
 
 
 class ExtractionTestCase(unittest.TestCase):
@@ -20,6 +20,15 @@ class ExtractionTestCase(unittest.TestCase):
         self.assertEqual(facts["Microsoft"]["ebitda_margin"], 0.53)
         self.assertEqual(facts["Microsoft"]["r_and_d"], 29.5)
         self.assertEqual(facts["Microsoft"]["supply_chain_risk"], "low")
+
+    def test_extracts_evidence_snippets(self) -> None:
+        text = "Microsoft revenue was $245.1 billion. Microsoft supply chain risk remains low."
+
+        facts, evidence = extract_financial_facts_with_evidence(text, ["Microsoft"])
+
+        self.assertEqual(facts["Microsoft"]["revenue"], 245.1)
+        self.assertEqual(evidence["Microsoft"][0]["field"], "revenue")
+        self.assertEqual(evidence["Microsoft"][0]["snippet"], "Microsoft revenue was $245.1 billion.")
 
     def test_converts_millions_to_billions(self) -> None:
         text = "Apple revenue was $412,000 million. Apple supply chain risk is medium."
