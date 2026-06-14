@@ -98,6 +98,44 @@ class AnalysisStore:
     def start_job(self, job_id: int) -> None:
         self._update_job(job_id, status="running")
 
+    def claim_next_job(self) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT id
+                FROM jobs
+                WHERE status = ?
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                ("queued",),
+            ).fetchone()
+            if row is None:
+                return None
+            connection.execute(
+                """
+                UPDATE jobs
+                SET status = ?, updated_at = ?
+                WHERE id = ? AND status = ?
+                """,
+                ("running", _now(), row["id"], "queued"),
+            )
+            claimed = connection.execute(
+                """
+                SELECT id, status, query, payload, created_at, updated_at, error, analysis_id
+                FROM jobs
+                WHERE id = ?
+                """,
+                (row["id"],),
+            ).fetchone()
+        if claimed is None:
+            return None
+        job = dict(claimed)
+        payload = json.loads(job.pop("payload"))
+        job.update(payload)
+        return job
+
     def complete_job(self, job_id: int, analysis_id: int) -> None:
         self._update_job(job_id, status="completed", analysis_id=analysis_id, error=None)
 

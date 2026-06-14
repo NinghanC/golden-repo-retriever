@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from threading import Thread
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -9,6 +8,7 @@ from starlette.responses import RedirectResponse
 
 from ..documents import parse_report_upload
 from ..llm import LLMSettings
+from ..queueing import JobQueue
 from ..reporting import export_result
 from ..storage import AnalysisStore, DEFAULT_DATABASE_PATH
 from ..workflow import run_analysis
@@ -32,6 +32,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         description="Local finance-report workflow API for company metrics and summaries.",
     )
     store: AnalysisStore | None = None
+    queue: JobQueue | None = None
     static_dir = Path(__file__).resolve().parents[3] / "static"
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
@@ -41,30 +42,11 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
             store = AnalysisStore(database_path)
         return store
 
-    def run_job(job_id: int) -> None:
-        active_store = get_store()
-        job = active_store.get_job(job_id)
-        if job is None:
-            return
-        active_store.start_job(job_id)
-        try:
-            report_text = job.get("report_text")
-            if job.get("report_id") is not None:
-                report = active_store.get_report(int(job["report_id"]))
-                if report is None:
-                    raise ValueError("Report not found.")
-                report_text = report["text"]
-            result = run_analysis(
-                job["query"],
-                report_text=report_text,
-                llm_provider=job.get("llm_provider"),
-            )
-            if job.get("report_id") is not None:
-                result["report_source"] = f"report:{job['report_id']}"
-            analysis_id = active_store.save(result)
-            active_store.complete_job(job_id, analysis_id)
-        except Exception as exc:
-            active_store.fail_job(job_id, str(exc))
+    def get_queue() -> JobQueue:
+        nonlocal queue
+        if queue is None:
+            queue = JobQueue(database_path)
+        return queue
 
     def report_text_from_payload(report_id: int | None, report_text: str | None) -> tuple[str | None, str | None]:
         if report_id is None:
@@ -176,13 +158,12 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
     @app.post("/api/v1/jobs", response_model=JobResponse, status_code=202)
     def create_job(payload: JobRequest) -> JobResponse:
         active_store = get_store()
-        job_id = active_store.create_job(
+        job_id = get_queue().enqueue(
             query=payload.query,
             report_text=payload.report_text,
             report_id=payload.report_id,
             llm_provider=payload.llm_provider,
         )
-        Thread(target=run_job, args=(job_id,), daemon=True).start()
         job = active_store.get_job(job_id)
         assert job is not None
         return JobResponse(**job)

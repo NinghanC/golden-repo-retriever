@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import tempfile
-import time
 import unittest
 from pathlib import Path
 
@@ -10,13 +9,15 @@ import fitz
 from fastapi.testclient import TestClient
 
 from golden_repo_retriever.api.app import create_app
+from golden_repo_retriever.worker import JobWorker
 
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp_dir = tempfile.TemporaryDirectory()
-        database_path = Path(self.tmp_dir.name) / "api-test.db"
-        self.client = TestClient(create_app(database_path=database_path))
+        self.database_path = Path(self.tmp_dir.name) / "api-test.db"
+        self.client = TestClient(create_app(database_path=self.database_path))
+        self.worker = JobWorker(database_path=self.database_path)
 
     def tearDown(self) -> None:
         self.tmp_dir.cleanup()
@@ -79,9 +80,9 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 202)
         job = response.json()
-        self.assertIn(job["status"], ["queued", "running", "completed"])
+        self.assertEqual(job["status"], "queued")
 
-        completed = self.wait_for_job(job["id"])
+        completed = self.process_job(job["id"])
 
         self.assertEqual(completed["status"], "completed")
         self.assertIsInstance(completed["analysis_id"], int)
@@ -94,7 +95,7 @@ class ApiTestCase(unittest.TestCase):
 
     def test_jobs_can_be_listed(self) -> None:
         created = self.client.post("/api/v1/jobs", json={"query": "Compare Apple."}).json()
-        self.wait_for_job(created["id"])
+        self.process_job(created["id"])
 
         response = self.client.get("/api/v1/jobs")
 
@@ -107,15 +108,12 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def wait_for_job(self, job_id: int) -> dict[str, object]:
-        for _ in range(20):
-            response = self.client.get(f"/api/v1/jobs/{job_id}")
-            self.assertEqual(response.status_code, 200)
-            job = response.json()
-            if job["status"] in ["completed", "failed"]:
-                return job
-            time.sleep(0.05)
-        self.fail(f"Job {job_id} did not finish.")
+    def process_job(self, job_id: int) -> dict[str, object]:
+        processed = self.worker.process_next()
+        self.assertTrue(processed)
+        response = self.client.get(f"/api/v1/jobs/{job_id}")
+        self.assertEqual(response.status_code, 200)
+        return response.json()
 
     def test_analyze_uses_report_text(self) -> None:
         response = self.client.post(
@@ -175,7 +173,7 @@ class ApiTestCase(unittest.TestCase):
             "/api/v1/jobs",
             json={"query": "Read this report.", "report_id": report["id"]},
         ).json()
-        completed = self.wait_for_job(created["id"])
+        completed = self.process_job(created["id"])
 
         self.assertEqual(completed["status"], "completed")
         self.assertEqual(completed["report_id"], report["id"])

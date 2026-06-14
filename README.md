@@ -13,7 +13,7 @@ The project currently includes:
 - Evidence snippets for extracted financial facts.
 - JSON result export.
 - Local analysis history backed by SQLite.
-- Background analysis jobs with status tracking.
+- Background analysis jobs with a separate worker.
 - A small agent workflow with retrieval, analysis, and synthesis phases.
 - Optional OpenAI, Mistral, or custom OpenAI-compatible summarization with local fallback.
 
@@ -70,6 +70,12 @@ Start the API:
 
 ```powershell
 .\.venv\Scripts\python.exe start_api.py
+```
+
+Start the worker in another terminal:
+
+```powershell
+.\.venv\Scripts\python.exe start_worker.py
 ```
 
 Open the frontend:
@@ -149,6 +155,8 @@ List jobs:
 curl http://127.0.0.1:8000/api/v1/jobs
 ```
 
+Jobs start as `queued`. The worker claims queued jobs, runs the analysis, saves the result, and marks each job as `completed` or `failed`.
+
 ## LLM Providers
 
 The default provider is `local`.
@@ -176,6 +184,8 @@ If no key is present, the app falls back to local summarization.
 ```text
 CLI/API/frontend
   -> query and optional saved report
+  -> queued job
+  -> worker
   -> extracted financial facts
   -> evidence snippets
   -> retrieval agent
@@ -197,14 +207,17 @@ golden-repo-retriever/
 |   |-- documents.py
 |   |-- extraction.py
 |   |-- llm.py
+|   |-- queueing.py
 |   |-- reporting.py
 |   |-- storage.py
+|   |-- worker.py
 |   |-- workflow.py
 |   `-- api/
 |-- static/
 |-- samples/
 |-- tests/
 |-- pyproject.toml
+|-- start_worker.py
 `-- README.md
 ```
 

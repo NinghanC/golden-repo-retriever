@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 golden-repo-retriever = "golden_repo_retriever.cli:main"
+golden-repo-worker = "golden_repo_retriever.worker:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
