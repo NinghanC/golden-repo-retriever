@@ -28,16 +28,25 @@ def calculate_metrics(company: str, facts: dict[str, float | str] | None = None)
     }
 
 
-def build_summary(companies: list[str], metrics: dict[str, dict[str, float | str]]) -> str:
+def build_summary(
+    companies: list[str],
+    metrics: dict[str, dict[str, float | str]],
+    market_data: dict[str, dict[str, float | str]] | None = None,
+) -> str:
     """Create a plain English summary without any cloud model."""
+    market_data = market_data or {}
     lines = []
     for company in companies:
         company_metrics = metrics[company]
         ebitda_margin = float(company_metrics["ebitda_margin"])
         r_and_d_intensity = float(company_metrics["r_and_d_intensity"])
         risk = company_metrics["supply_chain_risk"]
+        market = market_data.get(company, {})
+        ticker = market.get("ticker")
+        price = market.get("price")
+        market_note = f" Market snapshot: {ticker} at ${float(price):.2f}." if ticker and price else ""
         lines.append(
             f"{company}: EBITDA margin {ebitda_margin:.1%}, "
-            f"R&D intensity {r_and_d_intensity:.1%}, supply chain risk {risk}."
+            f"R&D intensity {r_and_d_intensity:.1%}, supply chain risk {risk}.{market_note}"
         )
     return " ".join(lines)

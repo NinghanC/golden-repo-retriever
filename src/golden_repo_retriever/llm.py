@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import httpx
 from dotenv import load_dotenv
 
+from .config import settings
+
 load_dotenv()
 
 
@@ -19,7 +21,7 @@ class LLMSettings:
 
     @classmethod
     def from_env(cls, provider: str | None = None) -> "LLMSettings":
-        selected = (provider or os.getenv("LLM_PROVIDER") or "local").strip().lower()
+        selected = (provider or settings.default_llm_provider).strip().lower()
         timeout = float(os.getenv("LLM_TIMEOUT_SECONDS") or "45")
 
         if selected == "openai":

@@ -11,6 +11,7 @@ The project currently includes:
 - A saved report library for uploaded documents.
 - Simple financial fact extraction from report text.
 - Evidence snippets for extracted financial facts.
+- Local market data snapshots for known companies.
 - JSON result export.
 - Local analysis history backed by SQLite.
 - Background analysis jobs with a separate worker.
@@ -157,6 +158,23 @@ curl http://127.0.0.1:8000/api/v1/jobs
 
 Jobs start as `queued`. The worker claims queued jobs, runs the analysis, saves the result, and marks each job as `completed` or `failed`.
 
+## Configuration
+
+The app reads settings from environment variables or a `.env` file.
+
+```text
+APP_NAME=Golden Repo Retriever
+APP_VERSION=0.1.0
+DATABASE_PATH=data/golden_repo_retriever.db
+API_HOST=127.0.0.1
+API_PORT=8000
+WORKER_POLL_SECONDS=2.0
+LLM_PROVIDER=local
+LOG_LEVEL=INFO
+```
+
+Logs use a standard timestamp, level, module, and message format.
+
 ## LLM Providers
 
 The default provider is `local`.
@@ -188,6 +206,7 @@ CLI/API/frontend
   -> worker
   -> extracted financial facts
   -> evidence snippets
+  -> market data snapshot
   -> retrieval agent
   -> analyst agent
   -> synthesizer agent
@@ -204,9 +223,12 @@ golden-repo-retriever/
 |-- src/golden_repo_retriever/
 |   |-- agents.py
 |   |-- cli.py
+|   |-- config.py
 |   |-- documents.py
 |   |-- extraction.py
+|   |-- logging_utils.py
 |   |-- llm.py
+|   |-- market_data.py
 |   |-- queueing.py
 |   |-- reporting.py
 |   |-- storage.py

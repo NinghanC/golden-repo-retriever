@@ -21,6 +21,7 @@ class AnalyzeResponse(BaseModel):
     extracted_facts: dict[str, dict[str, float | str]] = Field(default_factory=dict)
     evidence: dict[str, list[dict[str, float | str]]] = Field(default_factory=dict)
     metrics: dict[str, dict[str, float | str]]
+    market_data: dict[str, dict[str, float | str]] = Field(default_factory=dict)
     summary: str
     llm_provider: str
     audit_log: list[dict[str, str]]

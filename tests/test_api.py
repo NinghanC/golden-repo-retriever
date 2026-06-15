@@ -49,6 +49,7 @@ class ApiTestCase(unittest.TestCase):
         payload = response.json()
         self.assertIsInstance(payload["analysis_id"], int)
         self.assertEqual(payload["companies"], ["Apple", "Microsoft"])
+        self.assertEqual(payload["market_data"]["Apple"]["ticker"], "AAPL")
         self.assertEqual(payload["llm_provider"], "local")
         self.assertIn("summary", payload)
 

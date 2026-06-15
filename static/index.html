@@ -311,6 +311,20 @@
           <tbody id="metricsBody"></tbody>
         </table>
 
+        <h2 style="margin-top:22px">Market Data</h2>
+        <table id="marketTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Ticker</th>
+              <th>Price</th>
+              <th>Market Cap</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody id="marketBody"></tbody>
+        </table>
+
         <h2 style="margin-top:22px">Audit Log</h2>
         <div class="audit" id="auditLog"></div>
 
@@ -336,6 +350,8 @@
     const factsBody = document.getElementById('factsBody');
     const metricsTable = document.getElementById('metricsTable');
     const metricsBody = document.getElementById('metricsBody');
+    const marketTable = document.getElementById('marketTable');
+    const marketBody = document.getElementById('marketBody');
     const auditLogEl = document.getElementById('auditLog');
     const evidenceLogEl = document.getElementById('evidenceLog');
     const rawJsonEl = document.getElementById('rawJson');
@@ -409,6 +425,18 @@
         </tr>
       `).join('');
       metricsTable.style.display = Object.keys(metrics).length ? '' : 'none';
+
+      const marketData = data.market_data || {};
+      marketBody.innerHTML = Object.entries(marketData).map(([company, row]) => `
+        <tr>
+          <td>${company}</td>
+          <td>${row.ticker || '-'}</td>
+          <td>${row.price ? `$${Number(row.price).toFixed(2)}` : '-'}</td>
+          <td>${row.market_cap ? `$${Number(row.market_cap).toFixed(1)}B` : '-'}</td>
+          <td>${row.source || '-'}</td>
+        </tr>
+      `).join('');
+      marketTable.style.display = Object.keys(marketData).length ? '' : 'none';
 
       auditLogEl.innerHTML = (data.audit_log || []).map((event) => `
         <div class="event">
@@ -621,6 +649,8 @@
       evidenceLogEl.innerHTML = '';
       metricsBody.innerHTML = '';
       metricsTable.style.display = 'none';
+      marketBody.innerHTML = '';
+      marketTable.style.display = 'none';
       auditLogEl.innerHTML = '';
       rawJsonEl.textContent = '{}';
       setMessage('');

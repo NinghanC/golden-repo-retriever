@@ -8,8 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .config import settings
+from .logging_utils import get_logger
 
-DEFAULT_DATABASE_PATH = Path(__file__).resolve().parents[2] / "data" / "golden_repo_retriever.db"
+DEFAULT_DATABASE_PATH = settings.database_path
+logger = get_logger(__name__)
 
 
 def _now() -> str:
@@ -40,7 +43,9 @@ class AnalysisStore:
                     payload,
                 ),
             )
-            return int(cursor.lastrowid)
+            analysis_id = int(cursor.lastrowid)
+            logger.info("analysis_saved id=%s companies=%s", analysis_id, companies)
+            return analysis_id
 
     def list(self, limit: int = 20) -> list[dict[str, Any]]:
         with self._connect() as connection:
@@ -93,7 +98,9 @@ class AnalysisStore:
                 """,
                 ("queued", query, payload, timestamp, timestamp),
             )
-            return int(cursor.lastrowid)
+            job_id = int(cursor.lastrowid)
+            logger.info("job_queued id=%s report_id=%s", job_id, report_id)
+            return job_id
 
     def start_job(self, job_id: int) -> None:
         self._update_job(job_id, status="running")
@@ -138,9 +145,11 @@ class AnalysisStore:
 
     def complete_job(self, job_id: int, analysis_id: int) -> None:
         self._update_job(job_id, status="completed", analysis_id=analysis_id, error=None)
+        logger.info("job_completed id=%s analysis_id=%s", job_id, analysis_id)
 
     def fail_job(self, job_id: int, error: str) -> None:
         self._update_job(job_id, status="failed", error=error)
+        logger.warning("job_failed id=%s error=%s", job_id, error)
 
     def list_jobs(self, limit: int = 20) -> list[dict[str, Any]]:
         with self._connect() as connection:
@@ -194,7 +203,9 @@ class AnalysisStore:
                 """,
                 (filename, source, content_type, text, created_at),
             )
-            return int(cursor.lastrowid)
+            report_id = int(cursor.lastrowid)
+            logger.info("report_saved id=%s filename=%s", report_id, filename)
+            return report_id
 
     def list_reports(self, limit: int = 20) -> list[dict[str, Any]]:
         with self._connect() as connection:

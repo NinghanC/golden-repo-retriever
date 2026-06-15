@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import uvicorn
 
+from golden_repo_retriever.config import settings
+from golden_repo_retriever.logging_utils import configure_logging
+
 
 def main() -> None:
-    uvicorn.run("golden_repo_retriever.api.app:app", host="127.0.0.1", port=8000, reload=False)
+    configure_logging()
+    uvicorn.run("golden_repo_retriever.api.app:app", host=settings.api_host, port=settings.api_port, reload=False)
 
 
 if __name__ == "__main__":

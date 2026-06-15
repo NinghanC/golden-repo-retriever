@@ -17,6 +17,7 @@ class AnalysisState(TypedDict, total=False):
     extracted_facts: dict[str, dict[str, float | str]]
     evidence: dict[str, list[dict[str, float | str]]]
     metrics: dict[str, dict[str, float | str]]
+    market_data: dict[str, dict[str, float | str]]
     summary: str
     llm_provider: str
     audit_log: list[AuditEvent]

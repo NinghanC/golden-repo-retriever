@@ -6,8 +6,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
+from ..config import settings
 from ..documents import parse_report_upload
 from ..llm import LLMSettings
+from ..logging_utils import get_logger
 from ..queueing import JobQueue
 from ..reporting import export_result
 from ..storage import AnalysisStore, DEFAULT_DATABASE_PATH
@@ -24,13 +26,16 @@ from .schemas import (
     ReportResponse,
 )
 
+logger = get_logger(__name__)
+
 
 def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
     app = FastAPI(
-        title="Golden Repo Retriever",
-        version="0.1.0",
+        title=settings.app_name,
+        version=settings.app_version,
         description="Local finance-report workflow API for company metrics and summaries.",
     )
+    logger.info("api_app_created database_path=%s", database_path)
     store: AnalysisStore | None = None
     queue: JobQueue | None = None
     static_dir = Path(__file__).resolve().parents[3] / "static"
@@ -68,8 +73,8 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
     def config() -> ConfigResponse:
         llm_settings = LLMSettings.from_env()
         return ConfigResponse(
-            app_name="Golden Repo Retriever",
-            version="0.1.0",
+            app_name=settings.app_name,
+            version=settings.app_version,
             workflow=["query", "report_text", "state", "companies", "metrics", "summary", "audit_log"],
             features={
                 "local_text_reports": True,
@@ -94,6 +99,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         if payload.export_path:
             result["export_path"] = export_result(result, payload.export_path)
         result["analysis_id"] = get_store().save(result)
+        logger.info("analysis_request_saved id=%s", result["analysis_id"])
         return AnalyzeResponse(**result)
 
     @app.post("/api/v1/analyze-upload", response_model=AnalyzeResponse)
@@ -113,6 +119,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         if export_path:
             result["export_path"] = export_result(result, export_path)
         result["analysis_id"] = get_store().save(result)
+        logger.info("upload_analysis_saved id=%s source=%s", result["analysis_id"], source)
         return AnalyzeResponse(**result)
 
     @app.get("/api/v1/analyses", response_model=list[AnalysisHistoryItem])
@@ -166,6 +173,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         )
         job = active_store.get_job(job_id)
         assert job is not None
+        logger.info("job_request_queued id=%s", job_id)
         return JobResponse(**job)
 
     @app.get("/api/v1/jobs", response_model=list[JobResponse])

@@ -3,9 +3,13 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from .config import settings
+from .logging_utils import configure_logging, get_logger
 from .queueing import JobQueue
 from .storage import AnalysisStore, DEFAULT_DATABASE_PATH
 from .workflow import run_analysis
+
+logger = get_logger(__name__)
 
 
 class JobWorker:
@@ -17,6 +21,7 @@ class JobWorker:
         job = self.queue.claim_next()
         if job is None:
             return False
+        logger.info("job_claimed id=%s", job["id"])
         try:
             result = self._run_job(job)
             analysis_id = self.store.save(result)
@@ -25,11 +30,13 @@ class JobWorker:
             self.queue.mark_failed(job["id"], str(exc))
         return True
 
-    def run_forever(self, poll_seconds: float = 2.0) -> None:
+    def run_forever(self, poll_seconds: float | None = None) -> None:
+        active_poll_seconds = poll_seconds if poll_seconds is not None else settings.worker_poll_seconds
+        logger.info("worker_started poll_seconds=%s", active_poll_seconds)
         while True:
             processed = self.process_next()
             if not processed:
-                time.sleep(poll_seconds)
+                time.sleep(active_poll_seconds)
 
     def _run_job(self, job: dict[str, object]) -> dict[str, object]:
         report_text = job.get("report_text")
@@ -51,4 +58,5 @@ class JobWorker:
 
 
 def main() -> None:
+    configure_logging()
     JobWorker().run_forever()

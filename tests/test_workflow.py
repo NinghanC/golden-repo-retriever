@@ -14,7 +14,9 @@ class WorkflowTestCase(unittest.TestCase):
         self.assertEqual(result["companies"], ["Apple", "Microsoft"])
         self.assertIn("Apple", result["summary"])
         self.assertIn("Microsoft", result["summary"])
+        self.assertIn("AAPL", result["summary"])
         self.assertIn("ebitda_margin", result["metrics"]["Apple"])
+        self.assertEqual(result["market_data"]["Apple"]["ticker"], "AAPL")
         self.assertEqual(result["checkpoint_count"], 3)
         self.assertEqual(
             [event["step"] for event in result["audit_log"]],
