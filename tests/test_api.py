@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 import fitz
 from fastapi.testclient import TestClient
@@ -48,6 +49,9 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertIsInstance(payload["analysis_id"], int)
+        UUID(payload["run_id"])
+        self.assertIsInstance(payload["started_at"], str)
+        self.assertIsInstance(payload["completed_at"], str)
         self.assertEqual(payload["companies"], ["Apple", "Microsoft"])
         self.assertEqual(payload["market_data"]["Apple"]["ticker"], "AAPL")
         self.assertEqual(payload["llm_provider"], "local")

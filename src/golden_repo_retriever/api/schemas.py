@@ -15,6 +15,9 @@ class AnalyzeRequest(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     analysis_id: int | None = None
+    run_id: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
     created_at: str | None = None
     query: str
     companies: list[str]

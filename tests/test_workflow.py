@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 from golden_repo_retriever import run_analysis
 
@@ -11,6 +12,9 @@ class WorkflowTestCase(unittest.TestCase):
     def test_run_analysis_returns_summary(self) -> None:
         result = run_analysis("Compare Apple and Microsoft.")
 
+        UUID(result["run_id"])
+        self.assertIn("T", result["started_at"])
+        self.assertIn("T", result["completed_at"])
         self.assertEqual(result["companies"], ["Apple", "Microsoft"])
         self.assertIn("Apple", result["summary"])
         self.assertIn("Microsoft", result["summary"])
@@ -22,6 +26,7 @@ class WorkflowTestCase(unittest.TestCase):
             [event["step"] for event in result["audit_log"]],
             ["retrieval_agent", "analyst_agent", "synthesizer_agent"],
         )
+        self.assertIn("timestamp", result["audit_log"][0])
 
     def test_run_analysis_uses_report_text_for_company_detection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

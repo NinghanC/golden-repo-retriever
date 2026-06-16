@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from uuid import uuid4
+
 from .agents import analyst_agent, retrieval_agent, synthesizer_agent
 from .documents import parse_report_file
 from .llm import BaseLLMClient, build_llm_client
@@ -18,6 +21,8 @@ def run_analysis(
     Each phase reads and updates one shared state object.
     """
     state: AnalysisState = {
+        "run_id": str(uuid4()),
+        "started_at": _now(),
         "query": query,
         "audit_log": [],
     }
@@ -31,6 +36,7 @@ def run_analysis(
     analyst_agent(state)
     synthesizer_agent(state, llm_client=active_llm_client)
     state["checkpoint_count"] = len(state["audit_log"])
+    state["completed_at"] = _now()
     return state
 
 
@@ -45,3 +51,7 @@ def load_report_text(state: AnalysisState, report_text: str) -> None:
     state["report_source"] = "request"
     state["report_text"] = report_text
     record_event(state, "load_report", "ok", "Loaded report text from request.")
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat()
