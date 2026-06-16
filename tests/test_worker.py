@@ -6,6 +6,7 @@ from pathlib import Path
 
 from golden_repo_retriever.queueing import JobQueue
 from golden_repo_retriever.storage import AnalysisStore
+from golden_repo_retriever.knowledge_store import KnowledgeStore
 from golden_repo_retriever.worker import JobWorker
 
 
@@ -22,18 +23,24 @@ class WorkerTestCase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             database_path = Path(tmp_dir) / "worker.db"
             store = AnalysisStore(database_path)
+            knowledge_store = KnowledgeStore(database_path)
             queue = JobQueue(database_path)
             worker = JobWorker(database_path)
-            job_id = queue.enqueue("Compare Microsoft.")
+            job_id = queue.enqueue(
+                "Read this report.",
+                report_text="Microsoft revenue was $245.1 billion.",
+            )
 
             processed = worker.process_next()
             job = store.get_job(job_id)
+            facts = knowledge_store.list_company_facts("Microsoft")
 
         self.assertTrue(processed)
         self.assertIsNotNone(job)
         assert job is not None
         self.assertEqual(job["status"], "completed")
         self.assertIsInstance(job["analysis_id"], int)
+        self.assertEqual(facts[0]["field"], "revenue")
 
     def test_worker_marks_missing_report_job_failed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from .config import settings
+from .knowledge_store import KnowledgeStore
 from .logging_utils import configure_logging, get_logger
 from .queueing import JobQueue
 from .storage import AnalysisStore, DEFAULT_DATABASE_PATH
@@ -15,6 +16,7 @@ logger = get_logger(__name__)
 class JobWorker:
     def __init__(self, database_path: str | Path = DEFAULT_DATABASE_PATH) -> None:
         self.store = AnalysisStore(database_path)
+        self.knowledge_store = KnowledgeStore(database_path)
         self.queue = JobQueue(database_path)
 
     def process_next(self) -> bool:
@@ -25,6 +27,7 @@ class JobWorker:
         try:
             result = self._run_job(job)
             analysis_id = self.store.save(result)
+            self.knowledge_store.save_from_analysis(analysis_id, result)
             self.queue.mark_completed(job["id"], analysis_id)
         except Exception as exc:
             self.queue.mark_failed(job["id"], str(exc))

@@ -132,6 +132,14 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(payload["evidence"]["Microsoft"][0]["snippet"], "Microsoft revenue was $245.1 billion.")
         self.assertEqual(payload["audit_log"][0]["step"], "load_report")
 
+        knowledge = self.client.get("/api/v1/knowledge/Microsoft")
+
+        self.assertEqual(knowledge.status_code, 200)
+        facts = knowledge.json()
+        self.assertEqual(facts[0]["company"], "Microsoft")
+        self.assertEqual(facts[0]["field"], "supply_chain_risk")
+        self.assertEqual(facts[-1]["field"], "revenue")
+
     def test_reports_can_be_saved_and_used_for_analysis(self) -> None:
         created = self.client.post(
             "/api/v1/reports",
@@ -181,6 +189,10 @@ class ApiTestCase(unittest.TestCase):
         analysis = self.client.get(f"/api/v1/analyses/{completed['analysis_id']}").json()
         self.assertEqual(analysis["companies"], ["Apple"])
         self.assertEqual(analysis["extracted_facts"]["Apple"]["revenue"], 412.0)
+
+        knowledge = self.client.get("/api/v1/knowledge/Apple").json()
+        self.assertEqual(knowledge[0]["company"], "Apple")
+        self.assertEqual(knowledge[0]["field"], "revenue")
 
     def test_missing_report_returns_404(self) -> None:
         response = self.client.get("/api/v1/reports/999")

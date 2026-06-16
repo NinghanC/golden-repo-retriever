@@ -274,6 +274,13 @@
             <p class="empty">No jobs.</p>
           </div>
         </section>
+
+        <section>
+          <h2>Knowledge</h2>
+          <div class="history-list" id="knowledgeList">
+            <p class="empty">No stored facts.</p>
+          </div>
+        </section>
       </div>
 
       <section>
@@ -358,6 +365,7 @@
     const reportsListEl = document.getElementById('reportsList');
     const historyListEl = document.getElementById('historyList');
     const jobsListEl = document.getElementById('jobsList');
+    const knowledgeListEl = document.getElementById('knowledgeList');
     let selectedReportId = null;
 
     async function checkHealth() {
@@ -520,6 +528,27 @@
       }
     }
 
+    async function loadKnowledge(company = null) {
+      try {
+        const url = company ? `/api/v1/knowledge/${encodeURIComponent(company)}` : '/api/v1/knowledge';
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(response.statusText);
+        const items = await response.json();
+        if (!items.length) {
+          knowledgeListEl.innerHTML = '<p class="empty">No stored facts.</p>';
+          return;
+        }
+        knowledgeListEl.innerHTML = items.map((item) => `
+          <button class="history-item" type="button" data-knowledge-company="${item.company}">
+            <strong>${item.company} - ${item.field}: ${item.value}</strong>
+            <span>${item.snippet || item.source}</span>
+          </button>
+        `).join('');
+      } catch (error) {
+        knowledgeListEl.innerHTML = '<p class="empty">Knowledge unavailable.</p>';
+      }
+    }
+
     async function runAnalysis() {
       const query = queryEl.value.trim();
       if (!query) {
@@ -559,6 +588,7 @@
         const data = await response.json();
         renderResult(data);
         await loadHistory();
+        await loadKnowledge();
         setMessage('Analysis complete.');
       } catch (error) {
         setMessage(`Error: ${error.message}`, true);
@@ -629,6 +659,7 @@
         }
 
         await loadJobs();
+        await loadKnowledge();
         setMessage('Job submitted.');
       } catch (error) {
         setMessage(`Error: ${error.message}`, true);
@@ -694,6 +725,12 @@
       }
     });
 
+    knowledgeListEl.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-knowledge-company]');
+      if (!button) return;
+      loadKnowledge(button.dataset.knowledgeCompany);
+    });
+
     runBtn.addEventListener('click', runAnalysis);
     jobBtn.addEventListener('click', createJob);
     uploadReportBtn.addEventListener('click', uploadReport);
@@ -701,7 +738,9 @@
     loadReports();
     loadHistory();
     loadJobs();
+    loadKnowledge();
     setInterval(loadJobs, 4000);
+    setInterval(() => loadKnowledge(), 6000);
   </script>
 </body>
 </html>

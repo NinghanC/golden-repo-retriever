@@ -12,6 +12,7 @@ The project currently includes:
 - Simple financial fact extraction from report text.
 - Evidence snippets for extracted financial facts.
 - Local market data snapshots for known companies.
+- A knowledge store for reusable company facts and evidence.
 - JSON result export.
 - Local analysis history backed by SQLite.
 - Background analysis jobs with a separate worker.
@@ -158,6 +159,18 @@ curl http://127.0.0.1:8000/api/v1/jobs
 
 Jobs start as `queued`. The worker claims queued jobs, runs the analysis, saves the result, and marks each job as `completed` or `failed`.
 
+List stored knowledge:
+
+```powershell
+curl http://127.0.0.1:8000/api/v1/knowledge
+```
+
+List stored knowledge for one company:
+
+```powershell
+curl http://127.0.0.1:8000/api/v1/knowledge/Microsoft
+```
+
 ## Configuration
 
 The app reads settings from environment variables or a `.env` file.
@@ -207,6 +220,7 @@ CLI/API/frontend
   -> extracted financial facts
   -> evidence snippets
   -> market data snapshot
+  -> knowledge store
   -> retrieval agent
   -> analyst agent
   -> synthesizer agent
@@ -226,6 +240,7 @@ golden-repo-retriever/
 |   |-- config.py
 |   |-- documents.py
 |   |-- extraction.py
+|   |-- knowledge_store.py
 |   |-- logging_utils.py
 |   |-- llm.py
 |   |-- market_data.py

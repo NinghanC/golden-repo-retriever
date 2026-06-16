@@ -85,3 +85,14 @@ class ReportListItem(BaseModel):
     source: str
     content_type: str | None = None
     created_at: str
+
+
+class KnowledgeFact(BaseModel):
+    id: int
+    company: str
+    field: str
+    value: str
+    source: str
+    snippet: str | None = None
+    analysis_id: int | None = None
+    created_at: str

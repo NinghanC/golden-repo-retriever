@@ -8,6 +8,7 @@ from starlette.responses import RedirectResponse
 
 from ..config import settings
 from ..documents import parse_report_upload
+from ..knowledge_store import KnowledgeStore
 from ..llm import LLMSettings
 from ..logging_utils import get_logger
 from ..queueing import JobQueue
@@ -22,6 +23,7 @@ from .schemas import (
     HealthResponse,
     JobRequest,
     JobResponse,
+    KnowledgeFact,
     ReportListItem,
     ReportResponse,
 )
@@ -37,6 +39,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
     )
     logger.info("api_app_created database_path=%s", database_path)
     store: AnalysisStore | None = None
+    knowledge_store: KnowledgeStore | None = None
     queue: JobQueue | None = None
     static_dir = Path(__file__).resolve().parents[3] / "static"
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -52,6 +55,18 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         if queue is None:
             queue = JobQueue(database_path)
         return queue
+
+    def get_knowledge_store() -> KnowledgeStore:
+        nonlocal knowledge_store
+        if knowledge_store is None:
+            knowledge_store = KnowledgeStore(database_path)
+        return knowledge_store
+
+    def save_analysis_result(result: dict[str, object]) -> int:
+        analysis_id = get_store().save(result)
+        result["analysis_id"] = analysis_id
+        get_knowledge_store().save_from_analysis(analysis_id, result)
+        return analysis_id
 
     def report_text_from_payload(report_id: int | None, report_text: str | None) -> tuple[str | None, str | None]:
         if report_id is None:
@@ -85,6 +100,8 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
                 "background_jobs": True,
                 "report_library": True,
                 "evidence": True,
+                "knowledge_store": True,
+                "company_memory": True,
                 "llm_provider": llm_settings.provider,
                 "llm_enabled": bool(llm_settings.api_key),
             },
@@ -98,7 +115,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
             result["report_source"] = report_source
         if payload.export_path:
             result["export_path"] = export_result(result, payload.export_path)
-        result["analysis_id"] = get_store().save(result)
+        result["analysis_id"] = save_analysis_result(result)
         logger.info("analysis_request_saved id=%s", result["analysis_id"])
         return AnalyzeResponse(**result)
 
@@ -118,7 +135,7 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         result["report_source"] = source
         if export_path:
             result["export_path"] = export_result(result, export_path)
-        result["analysis_id"] = get_store().save(result)
+        result["analysis_id"] = save_analysis_result(result)
         logger.info("upload_analysis_saved id=%s source=%s", result["analysis_id"], source)
         return AnalyzeResponse(**result)
 
@@ -187,6 +204,19 @@ def create_app(database_path: str | Path = DEFAULT_DATABASE_PATH) -> FastAPI:
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found.")
         return JobResponse(**job)
+
+    @app.get("/api/v1/knowledge", response_model=list[KnowledgeFact])
+    def list_knowledge(limit: int = 50) -> list[KnowledgeFact]:
+        safe_limit = max(1, min(limit, 200))
+        return [KnowledgeFact(**item) for item in get_knowledge_store().list_facts(limit=safe_limit)]
+
+    @app.get("/api/v1/knowledge/{company}", response_model=list[KnowledgeFact])
+    def list_company_knowledge(company: str, limit: int = 50) -> list[KnowledgeFact]:
+        safe_limit = max(1, min(limit, 200))
+        return [
+            KnowledgeFact(**item)
+            for item in get_knowledge_store().list_company_facts(company=company, limit=safe_limit)
+        ]
 
     return app
 
